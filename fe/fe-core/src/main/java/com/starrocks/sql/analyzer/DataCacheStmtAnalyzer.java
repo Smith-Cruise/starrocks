@@ -29,7 +29,10 @@ import com.starrocks.server.MetadataMgr;
 import com.starrocks.sql.ast.AstVisitor;
 import com.starrocks.sql.ast.ClearDataCacheRulesStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.DropDataCacheRuleStmt;
+import com.starrocks.sql.ast.DropDataCacheWarmupJobStmt;
+import com.starrocks.sql.ast.ShowDataCacheWarmupJobsStmt;
 import com.starrocks.sql.ast.StatementBase;
 
 import java.util.List;
@@ -114,6 +117,30 @@ public class DataCacheStmtAnalyzer {
         @Override
         public Void visitClearDataCacheRulesStatement(ClearDataCacheRulesStmt statement, ConnectContext context) {
             return null;
+        }
+
+        @Override
+        public Void visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement,
+                                                           ConnectContext context) {
+            if (!statement.isSyncMode()) {
+                throw new SemanticException("DataCache only support sync warmup mode now");
+            }
+            long cacheRuleId = statement.getCacheRuleId();
+            if (!dataCacheMgr.isExistCacheRule(cacheRuleId)) {
+                throw new SemanticException(String.format("DataCache warmup job's rule id %d not existed", cacheRuleId));
+            }
+            return null;
+        }
+
+        @Override
+        public Void visitShowDataCacheWarmupJobsStatement(ShowDataCacheWarmupJobsStmt statement,
+                                                          ConnectContext context) {
+            throw new SemanticException("DataCache don't support show warmup jobs now");
+        }
+
+        @Override
+        public Void visitDropDataCacheWarmupJobStatement(DropDataCacheWarmupJobStmt statement, ConnectContext context) {
+            throw new SemanticException("DataCache don't support drop warmup job now");
         }
     }
 

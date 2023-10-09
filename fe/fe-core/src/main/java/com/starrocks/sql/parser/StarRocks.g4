@@ -267,6 +267,9 @@ statement
     | showDataCacheRulesStatement
     | dropDataCacheRuleStatement
     | clearDataCacheRulesStatement
+    | createDataCacheWarmupJob
+    | showDataCacheWarmupJobs
+    | dropDataCacheWarmupJob
 
     // Export Statement
     | exportStatement
@@ -1770,6 +1773,18 @@ clearDataCacheRulesStatement
     : CLEAR DATACACHE RULES
     ;
 
+createDataCacheWarmupJob
+    : CREATE DATACACHE WARMUP JOB INTEGER_VALUE (WITH (SYNC | ASYNC) MODE)? properties?
+    ;
+
+showDataCacheWarmupJobs
+    : SHOW DATACACHE WARMUP JOBS
+    ;
+
+dropDataCacheWarmupJob
+    : DROP DATACACHE WARMUP JOB INTEGER_VALUE
+    ;
+
 // ------------------------------------------- Export Statement --------------------------------------------------------
 
 exportStatement
@@ -2669,9 +2684,9 @@ nonReserved
     | HASH | HISTOGRAM | HELP | HLL_UNION | HOST | HOUR | HUB
     | IDENTIFIED | IMAGE | IMPERSONATE | INACTIVE | INCREMENTAL | INDEXES | INSTALL | INTEGRATION | INTEGRATIONS | INTERMEDIATE
     | INTERVAL | ISOLATION
-    | JOB
+    | JOB | JOBS
     | LABEL | LAST | LESS | LEVEL | LIST | LOCAL | LOCATION | LOGS | LOGICAL | LOW_PRIORITY | LOCK | LOCATIONS
-    | MASKING | MANUAL | MAP | MAPPING | MAPPINGS | MATERIALIZED | MAX | META | MIN | MINUTE | MODE | MODIFY | MONTH | MERGE | MINUS
+    | MASKING | MANUAL | MAP | MAPPING | MAPPINGS | WARMUP | MATERIALIZED | MAX | META | MIN | MINUTE | MODE | MODIFY | MONTH | MERGE | MINUS
     | NAME | NAMES | NEGATIVE | NO | NODE | NODES | NONE | NULLS | NUMBER | NUMERIC
     | OBSERVER | OF | OFFSET | ONLY | OPTIMIZER | OPEN | OPERATE | OPTION | OVERWRITE
     | PARTITIONS | PASSWORD | PATH | PAUSE | PENDING | PERCENTILE_UNION | PLUGIN | PLUGINS | POLICY | POLICIES

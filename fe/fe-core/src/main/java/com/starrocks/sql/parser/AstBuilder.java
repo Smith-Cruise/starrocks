@@ -166,6 +166,8 @@ import com.starrocks.sql.ast.CompactionClause;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -200,6 +202,7 @@ import com.starrocks.sql.ast.DropCatalogStmt;
 import com.starrocks.sql.ast.DropColumnClause;
 import com.starrocks.sql.ast.DropComputeNodeClause;
 import com.starrocks.sql.ast.DropDataCacheRuleStmt;
+import com.starrocks.sql.ast.DropDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.DropDbStmt;
 import com.starrocks.sql.ast.DropFileStmt;
 import com.starrocks.sql.ast.DropFollowerClause;
@@ -330,6 +333,7 @@ import com.starrocks.sql.ast.ShowCreateExternalCatalogStmt;
 import com.starrocks.sql.ast.ShowCreateRoutineLoadStmt;
 import com.starrocks.sql.ast.ShowCreateTableStmt;
 import com.starrocks.sql.ast.ShowDataCacheRulesStmt;
+import com.starrocks.sql.ast.ShowDataCacheWarmupJobsStmt;
 import com.starrocks.sql.ast.ShowDataStmt;
 import com.starrocks.sql.ast.ShowDbStmt;
 import com.starrocks.sql.ast.ShowDeleteStmt;
@@ -3004,6 +3008,34 @@ public class AstBuilder extends StarRocksBaseVisitor<ParseNode> {
     @Override
     public ParseNode visitClearDataCacheRulesStatement(StarRocksParser.ClearDataCacheRulesStatementContext ctx) {
         return new ClearDataCacheRulesStmt(createPos(ctx));
+    }
+
+    @Override
+    public ParseNode visitCreateDataCacheWarmupJob(StarRocksParser.CreateDataCacheWarmupJobContext ctx) {
+        long cacheRuleId = Long.parseLong(ctx.INTEGER_VALUE().getText());
+
+        boolean isSyncMode = (ctx.ASYNC() != null);
+
+        Map<String, String> properties = null;
+        if (ctx.properties() != null) {
+            properties = new HashMap<>();
+            List<Property> propertyList = visit(ctx.properties().property(), Property.class);
+            for (Property property : propertyList) {
+                properties.put(property.getKey(), property.getValue());
+            }
+        }
+        return new CreateDataCacheWarmupJobStmt(cacheRuleId, isSyncMode, properties, createPos(ctx));
+    }
+
+    @Override
+    public ParseNode visitDropDataCacheWarmupJob(StarRocksParser.DropDataCacheWarmupJobContext ctx) {
+        long jobId = Long.parseLong(ctx.INTEGER_VALUE().getText());
+        return new DropDataCacheWarmupJobStmt(jobId, createPos(ctx));
+    }
+
+    @Override
+    public ParseNode visitShowDataCacheWarmupJobs(StarRocksParser.ShowDataCacheWarmupJobsContext ctx) {
+        return new ShowDataCacheWarmupJobsStmt(createPos(ctx));
     }
 
     // ----------------------------------------------- Export Statement ------------------------------------------------

@@ -154,6 +154,7 @@ set(EXEC_FILES
     sorting/sort_column.cpp
     sorting/sort_permute.cpp
     connector_scan_node.cpp
+    datacache_warmup_node.cpp
     pipeline/exchange/exchange_merge_sort_source_operator.cpp
     pipeline/exchange/exchange_parallel_merge_source_operator.cpp
     pipeline/exchange/exchange_sink_operator.cpp
@@ -181,6 +182,7 @@ set(EXEC_FILES
     pipeline/scan/olap_scan_prepare_operator.cpp
     pipeline/scan/olap_scan_context.cpp
     pipeline/scan/connector_scan_operator.cpp
+    pipeline/scan/datacache_warmup_operator.cpp
     stream/scan/stream_scan_operator.cpp
     pipeline/scan/meta_chunk_source.cpp
     pipeline/scan/meta_scan_operator.cpp

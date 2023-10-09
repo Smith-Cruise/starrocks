@@ -29,6 +29,7 @@ import com.starrocks.common.profile.Tracers;
 import com.starrocks.common.util.ConsistentHashRing;
 import com.starrocks.common.util.HashRing;
 import com.starrocks.common.util.RendezvousHashRing;
+import com.starrocks.planner.DataCacheWarmupNode;
 import com.starrocks.planner.DeltaLakeScanNode;
 import com.starrocks.planner.FileTableScanNode;
 import com.starrocks.planner.HdfsScanNode;
@@ -115,6 +116,9 @@ public class HDFSBackendSelector implements BackendSelector {
                 PaimonScanNode node = (PaimonScanNode) scanNode;
                 predicates = node.getScanNodePredicates();
                 basePath = node.getPaimonTable().getTableLocation();
+            } else if (scanNode instanceof DataCacheWarmupNode) {
+                predicates = new HDFSScanNodePredicates();
+                basePath = "";
             } else {
                 Preconditions.checkState(false);
             }

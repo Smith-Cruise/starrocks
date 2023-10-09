@@ -83,6 +83,7 @@ enum TPlanNodeType {
   STREAM_JOIN_NODE,
   STREAM_AGG_NODE,
   LAKE_META_SCAN_NODE,
+  DATACACHE_WARMUP_NODE,
 }
 
 // phases of an execution node
@@ -1139,6 +1140,10 @@ struct TStreamAggregationNode {
   24: optional i32 agg_func_set_version = 1
 }
 
+struct TDataCacheWarmupNode {
+   1: optional list<string> scan_ranges;
+}
+
 
 // This is essentially a union of all messages corresponding to subclasses
 // of PlanNode.
@@ -1208,6 +1213,8 @@ struct TPlanNode {
   63: optional TLakeScanNode lake_scan_node;
   
   64: optional TNestLoopJoinNode nestloop_join_node;
+
+  65: optional TDataCacheWarmupNode datacache_warmup_node;
 
   // 70 ~ 80 are reserved for stream operators
   // Stream plan

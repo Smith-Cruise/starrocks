@@ -79,6 +79,8 @@ import com.starrocks.system.ComputeNode;
 import com.starrocks.thrift.TDescriptorTable;
 import com.starrocks.thrift.TLoadJobType;
 import com.starrocks.thrift.TNetworkAddress;
+import com.starrocks.thrift.TQueryGlobals;
+import com.starrocks.thrift.TQueryOptions;
 import com.starrocks.thrift.TQueryType;
 import com.starrocks.thrift.TReportAuditStatisticsParams;
 import com.starrocks.thrift.TReportExecStatusParams;
@@ -206,6 +208,37 @@ public class DefaultCoordinator extends Coordinator {
                     fragments, scanNodes, timezone,
                     startTime, sessionVariables, execMemLimit);
 
+            return new DefaultCoordinator(context, jobSpec);
+        }
+
+        @Override
+        public Coordinator createDatacacheWarmupScheduler(TUniqueId queryId, DescriptorTable descTable,
+                                                          List<PlanFragment> fragments,
+                                                          List<ScanNode> scanNodes, String timezone, long startTime) {
+            ConnectContext context = new ConnectContext();
+            context.setQualifiedUser(AuthenticationMgr.ROOT_USER);
+            context.setCurrentUserIdentity(UserIdentity.ROOT);
+            context.setCurrentRoleIds(Sets.newHashSet(PrivilegeBuiltinConstants.ROOT_ROLE_ID));
+            context.getSessionVariable().setEnablePipelineEngine(true);
+            context.getSessionVariable().setPipelineDop(0);
+
+            TQueryOptions queryOptions = new TQueryOptions();
+            queryOptions.setMem_limit(10240);
+
+            TQueryGlobals queryGlobals = CoordinatorPreprocessor.genQueryGlobals(startTime, "UTC+8");
+
+            JobSpec jobSpec = new JobSpec.Builder().queryId(queryId)
+                    .queryOptions(queryOptions)
+                    .fragments(fragments)
+                    .scanNodes(scanNodes)
+                    .descTable(descTable.toThrift())
+                    //                    .enableStreamPipeline(false)
+                    //                    .isBlockQuery(true)
+                    //                    .needReport(true)
+                    .queryGlobals(queryGlobals)
+                    .queryOptions(queryOptions)
+                    .commonProperties(context)
+                    .build();
             return new DefaultCoordinator(context, jobSpec);
         }
 

@@ -14,6 +14,7 @@
 
 package com.starrocks.qe.scheduler.assignment;
 
+import com.starrocks.planner.DataCacheWarmupNode;
 import com.starrocks.planner.DeltaLakeScanNode;
 import com.starrocks.planner.FileTableScanNode;
 import com.starrocks.planner.HdfsScanNode;
@@ -62,7 +63,8 @@ public class BackendSelectorFactory {
             return new NormalBackendSelector(scanNode, locations, assignment, workerProvider, false);
         } else if (scanNode instanceof HdfsScanNode || scanNode instanceof IcebergScanNode ||
                 scanNode instanceof HudiScanNode || scanNode instanceof DeltaLakeScanNode ||
-                scanNode instanceof FileTableScanNode || scanNode instanceof PaimonScanNode) {
+                scanNode instanceof FileTableScanNode || scanNode instanceof PaimonScanNode ||
+                scanNode instanceof DataCacheWarmupNode) {
             return new HDFSBackendSelector(scanNode, locations, assignment, workerProvider,
                     sessionVariable.getForceScheduleLocal(),
                     sessionVariable.getHDFSBackendSelectorScanRangeShuffle());

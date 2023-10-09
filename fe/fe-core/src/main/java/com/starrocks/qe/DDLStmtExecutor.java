@@ -14,10 +14,13 @@
 
 package com.starrocks.qe;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.starrocks.analysis.FunctionName;
 import com.starrocks.analysis.ParseNode;
+import com.starrocks.catalog.Column;
 import com.starrocks.catalog.Database;
+import com.starrocks.catalog.ScalarType;
 import com.starrocks.common.AlreadyExistsException;
 import com.starrocks.common.Config;
 import com.starrocks.common.DdlException;
@@ -26,7 +29,9 @@ import com.starrocks.common.ErrorReport;
 import com.starrocks.common.MetaNotFoundException;
 import com.starrocks.common.UserException;
 import com.starrocks.datacache.DataCacheMgr;
+import com.starrocks.datacache.WarmupJob;
 import com.starrocks.load.EtlJobType;
+import com.starrocks.qe.scheduler.Coordinator;
 import com.starrocks.scheduler.Constants;
 import com.starrocks.scheduler.Task;
 import com.starrocks.scheduler.TaskManager;
@@ -64,6 +69,7 @@ import com.starrocks.sql.ast.ClearDataCacheRulesStmt;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -126,6 +132,7 @@ import com.starrocks.statistic.NativeAnalyzeJob;
 import com.starrocks.statistic.StatisticExecutor;
 import com.starrocks.statistic.StatisticUtils;
 import com.starrocks.statistic.StatsConstants;
+import com.starrocks.thrift.TUniqueId;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -135,6 +142,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class DDLStmtExecutor {
 
@@ -989,6 +997,34 @@ public class DDLStmtExecutor {
                 DataCacheMgr.getInstance().clearRules();
             });
             return null;
+        }
+        @Override
+        public ShowResultSet visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement,
+                                                                    ConnectContext context) {
+            UUID uuid = UUID.randomUUID();
+            TUniqueId queryId = new TUniqueId(uuid.getMostSignificantBits(), uuid.getLeastSignificantBits());
+            System.out.println(queryId.toString());
+            try {
+                WarmupJob warmupJob = new WarmupJob();
+                Coordinator coordinator = warmupJob.plan(queryId);
+                QeProcessorImpl.INSTANCE.registerQuery(queryId, coordinator);
+                coordinator.exec();
+                RowBatch rowBatch = coordinator.getNext();
+                System.out.println(rowBatch.getBatch().toString());
+                boolean res = coordinator.join(5);
+                if (res) {
+                    System.out.println("success");
+                } else {
+                    System.out.println("timeout");
+                }
+            } catch (Exception e) {
+                LOG.warn(e);
+            } finally {
+                QeProcessorImpl.INSTANCE.unregisterQuery(queryId);
+            }
+            ShowResultSetMetaData metaData = new ShowResultSetMetaData(ImmutableList.of(new Column("name",
+                    ScalarType.createDefaultExternalTableString())));
+            return new ShowResultSet(metaData, ImmutableList.of(ImmutableList.of("hello")));
         }
     }
 
