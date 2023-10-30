@@ -544,7 +544,7 @@ public class JobSpec {
             return this;
         }
 
-        public Builder needReport(boolean needReport) {
+        private Builder needReport(boolean needReport) {
             this.needReport = needReport;
             return this;
         }

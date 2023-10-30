@@ -117,8 +117,8 @@ public class HDFSBackendSelector implements BackendSelector {
                 predicates = node.getScanNodePredicates();
                 basePath = node.getPaimonTable().getTableLocation();
             } else if (scanNode instanceof DataCacheWarmupNode) {
-                predicates = new HDFSScanNodePredicates();
-                basePath = "";
+                //                predicates = new HDFSScanNodePredicates();
+                //                basePath = "";
             } else {
                 Preconditions.checkState(false);
             }

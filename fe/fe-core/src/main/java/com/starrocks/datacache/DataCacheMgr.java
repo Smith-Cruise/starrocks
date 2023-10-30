@@ -15,6 +15,7 @@
 package com.starrocks.datacache;
 
 import com.starrocks.analysis.Expr;
+import com.starrocks.qe.ShowResultSet;
 import com.starrocks.sql.analyzer.SemanticException;
 import com.starrocks.sql.ast.QualifiedName;
 
@@ -206,6 +207,11 @@ public class DataCacheMgr {
         } finally {
             readUnlock();
         }
+    }
+
+    public ShowResultSet createWarmupJob() {
+        DataCacheWarmupTask task = new DataCacheWarmupTask();
+        return task.execute();
     }
 
     private boolean isMatchAll(String pattern) {

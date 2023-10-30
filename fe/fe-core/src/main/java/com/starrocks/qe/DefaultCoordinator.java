@@ -223,20 +223,15 @@ public class DefaultCoordinator extends Coordinator {
             context.getSessionVariable().setPipelineDop(0);
 
             TQueryOptions queryOptions = new TQueryOptions();
-            queryOptions.setMem_limit(10240);
 
-            TQueryGlobals queryGlobals = CoordinatorPreprocessor.genQueryGlobals(startTime, "UTC+8");
+            TQueryGlobals queryGlobals = CoordinatorPreprocessor.genQueryGlobals(startTime, timezone);
 
             JobSpec jobSpec = new JobSpec.Builder().queryId(queryId)
                     .queryOptions(queryOptions)
                     .fragments(fragments)
                     .scanNodes(scanNodes)
                     .descTable(descTable.toThrift())
-                    //                    .enableStreamPipeline(false)
-                    //                    .isBlockQuery(true)
-                    //                    .needReport(true)
                     .queryGlobals(queryGlobals)
-                    .queryOptions(queryOptions)
                     .commonProperties(context)
                     .build();
             return new DefaultCoordinator(context, jobSpec);

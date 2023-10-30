@@ -81,8 +81,7 @@ public abstract class ScanNode extends PlanNode {
     }
 
     public String getTableName() {
-        // return desc.getTable().getName();
-        return "table name";
+         return desc.getTable().getName();
     }
 
     /**
