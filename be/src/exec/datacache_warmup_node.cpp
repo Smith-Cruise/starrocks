@@ -16,6 +16,28 @@
 
 namespace starrocks {
 
+Status DataCacheWarmupNode::open(starrocks::RuntimeState* state) {
+    return Status::NotSupported("DataCache warmup only support pipeline-engine in open()");
+}
+
+Status DataCacheWarmupNode::get_next(starrocks::RuntimeState* state, starrocks::ChunkPtr* chunk, bool* eos) {
+    return Status::NotSupported("DataCache warmup only support pipeline-engine in get_next()");
+}
+
+Status DataCacheWarmupNode::set_scan_ranges(const std::vector<TScanRangeParams>& scan_ranges) {
+    return Status::NotSupported("DataCache warmup only support pipeline-engine in set_scan_ranges()");
+}
+
+OpFactories DataCacheWarmupNode::decompose_to_pipeline(pipeline::PipelineBuilderContext* context) {
+    std::cout << "decompose pipeline dop" << std::endl;
+    size_t dop = 1;
+    size_t buffer_capacity = pipeline::ScanOperator::max_buffer_capacity() * dop;
+    pipeline::ChunkBufferLimiterPtr buffer_limiter = std::make_unique<pipeline::DynamicChunkBufferLimiter>(
+            buffer_capacity, buffer_capacity, _mem_limit, runtime_state()->chunk_size());
+
+    auto op_factory = std::make_shared<pipeline::DatacacheWarmupOperatorFactory>(context->next_operator_id(), this, dop, std::move(buffer_limiter));
+    return pipeline::decompose_scan_node_to_pipeline(op_factory, this, context);
+}
 
 
 } // namespace starrocks

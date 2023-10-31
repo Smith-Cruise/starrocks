@@ -210,7 +210,7 @@ public class DataCacheMgr {
     }
 
     public ShowResultSet createWarmupJob() {
-        DataCacheWarmupTask task = new DataCacheWarmupTask();
+        DataCacheWarmupTask task = new DataCacheWarmupTask("emr_hive_test", "chendingchao", "array_prune_parquet");
         return task.execute();
     }
 

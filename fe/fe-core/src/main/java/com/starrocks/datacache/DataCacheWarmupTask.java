@@ -22,34 +22,51 @@ import com.starrocks.analysis.SlotId;
 import com.starrocks.analysis.TupleDescriptor;
 import com.starrocks.catalog.Column;
 import com.starrocks.catalog.ScalarType;
+import com.starrocks.catalog.Table;
 import com.starrocks.common.util.TimeUtils;
+import com.starrocks.mysql.MysqlChannel;
 import com.starrocks.planner.DataCacheWarmupNode;
 import com.starrocks.planner.DataPartition;
 import com.starrocks.planner.PlanFragment;
 import com.starrocks.planner.PlanFragmentId;
 import com.starrocks.planner.PlanNodeId;
 import com.starrocks.planner.ScanNode;
+import com.starrocks.qe.ConnectContext;
 import com.starrocks.qe.DefaultCoordinator;
 import com.starrocks.qe.QeProcessorImpl;
 import com.starrocks.qe.RowBatch;
 import com.starrocks.qe.ShowResultSet;
 import com.starrocks.qe.ShowResultSetMetaData;
 import com.starrocks.qe.scheduler.Coordinator;
+import com.starrocks.server.GlobalStateMgr;
+import com.starrocks.server.MetadataMgr;
 import com.starrocks.thrift.TResultSinkType;
 import com.starrocks.thrift.TUniqueId;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import java.util.UUID;
 
 public class DataCacheWarmupTask {
+    private static final Logger LOG = LogManager.getLogger(DataCacheWarmupTask.class);
 
-    private DescriptorTable desc = new DescriptorTable();
-    private TupleDescriptor exportTupleDesc = null;
+    private static final ShowResultSetMetaData METADATA = new ShowResultSetMetaData(ImmutableList.of(
+            new Column("Status", ScalarType.createDefaultExternalTableString())));
 
-    public DataCacheWarmupTask() {
-        exportTupleDesc = desc.createTupleDescriptor();
-        SlotDescriptor slotDescriptor = desc.addSlotDescriptor(exportTupleDesc, new SlotId(0));
-        slotDescriptor.setColumn(new Column("hello", ScalarType.createDefaultExternalTableString()));
-        slotDescriptor.setIsNullable(true);
+    private final Table table;
+
+    private DescriptorTable descTbl = new DescriptorTable();
+
+    private TupleDescriptor tupleDescriptor = null;
+
+    public DataCacheWarmupTask(String catalogName, String dbName, String tblName) {
+        MetadataMgr metadataMgr = GlobalStateMgr.getCurrentState().getMetadataMgr();
+        table = metadataMgr.getTable(catalogName, dbName, tblName);
+
+        tupleDescriptor = descTbl.createTupleDescriptor();
+        tupleDescriptor.setTable(table);
+        tupleDescriptor.addSlot(
+                new SlotDescriptor(new SlotId(0), "Status", ScalarType.createDefaultExternalTableString(), true));
     }
 
     public ShowResultSet execute() {
@@ -58,32 +75,69 @@ public class DataCacheWarmupTask {
         System.out.println(queryId);
         ScanNode scanNode = genScanNode();
         PlanFragment planFragment = genPlanFragment(scanNode);
-        Coordinator coordinator = new DefaultCoordinator.Factory().createDatacacheWarmupScheduler(queryId, desc,
+        Coordinator coordinator = new DefaultCoordinator.Factory().createDatacacheWarmupScheduler(queryId, descTbl,
                 Lists.newArrayList(planFragment), Lists.newArrayList(scanNode), TimeUtils.DEFAULT_TIME_ZONE,
                 System.currentTimeMillis());
+
+        ShowResultSet showResultSet;
         try {
             QeProcessorImpl.INSTANCE.registerQuery(queryId, coordinator);
             coordinator.exec();
-            RowBatch rowBatch = coordinator.getNext();
-            System.out.println(rowBatch.getBatch().toString());
-            boolean res = coordinator.join(5);
+
+            ConnectContext context = ConnectContext.get();
+            {
+                MysqlChannel channel = context.getMysqlChannel();
+                RowBatch batch = null;
+                boolean isSendFields = false;
+                do {
+                    batch = coordinator.getNext();
+                    //                    // for outfile query, there will be only one empty batch send back with eos flag
+                    //                    if (batch.getBatch() != null) {
+                    //                        // For some language driver, getting error packet after fields packet will be recognized as a success result
+                    //                        // so We need to send fields after first batch arrived
+                    //                        if (!isSendFields) {
+                    //                            //                            sendFields(colNames, outputExprs);
+                    //                            isSendFields = true;
+                    //                        }
+                    //                        if (channel.isSendBufferNull()) {
+                    //                            int bufferSize = 0;
+                    //                            for (ByteBuffer row : batch.getBatch().getRows()) {
+                    //                                bufferSize += (row.position() - row.limit());
+                    //                            }
+                    //                            // +8 for header size
+                    //                            channel.initBuffer(bufferSize + 8);
+                    //                        }
+                    //
+                    //                        for (ByteBuffer row : batch.getBatch().getRows()) {
+                    //                            channel.sendOnePacket(row);
+                    //                        }
+                    //                        context.updateReturnRows(batch.getBatch().getRows().size());
+                    //                    }
+                } while (!batch.isEos());
+                if (!isSendFields) {
+                    //                    sendFields(colNames, outputExprs);
+                }
+            }
+            boolean res = coordinator.join(300);
             if (res) {
-                System.out.println("success");
+                showResultSet = new ShowResultSet(METADATA, ImmutableList.of(ImmutableList.of("success")));
             } else {
-                System.out.println("timeout");
+                showResultSet = new ShowResultSet(METADATA, ImmutableList.of(ImmutableList.of("execute timeout")));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOG.warn(e);
+            showResultSet = new ShowResultSet(METADATA, ImmutableList.of(ImmutableList.of("error")));
         } finally {
             QeProcessorImpl.INSTANCE.unregisterQuery(queryId);
         }
-        ShowResultSetMetaData metaData = new ShowResultSetMetaData(ImmutableList.of(new Column("name",
-                ScalarType.createDefaultExternalTableString())));
-        return new ShowResultSet(metaData, ImmutableList.of(ImmutableList.of("hello")));
+
+        return showResultSet;
     }
 
-    private ScanNode genScanNode() {
-        return new DataCacheWarmupNode(new PlanNodeId(0), exportTupleDesc, "WarmUpNode");
+    public ScanNode genScanNode() {
+        DataCacheWarmupNode scanNode = new DataCacheWarmupNode(new PlanNodeId(0), tupleDescriptor, "WarmUpNode", table);
+        scanNode.setupScanRangeLocations(descTbl);
+        return scanNode;
     }
 
     private PlanFragment genPlanFragment(ScanNode scanNode) {

@@ -120,12 +120,18 @@ private:
     Status _read_chunk(starrocks::RuntimeState *state, starrocks::ChunkPtr *chunk) override {
         std::cout << "end of file" << std::endl;
         ScanMorsel* scan_morsel = down_cast<ScanMorsel*>(_morsel.get());
-        std::cout << "file path" << scan_morsel->get_scan_range()->hdfs_scan_range.relative_path << std::endl;
+        std::cout << "file path " << scan_morsel->get_scan_range()->hdfs_scan_range.relative_path << std::endl;
+        TScanRange* scan_range = scan_morsel->get_scan_range();
+        std::string full_path = scan_range->hdfs_scan_range.__isset.full_path ? scan_range->hdfs_scan_range.full_path : "empty";
+        std::string relative_path = scan_range->hdfs_scan_range.__isset.relative_path ? scan_range->hdfs_scan_range.relative_path : "empty";
 
         ChunkPtr chunk_dst = std::make_shared<Chunk>();
-        ColumnPtr column = ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), true);
-        column->append_default(10);
-        chunk_dst->append_column(std::move(column), 0);
+        ColumnPtr col1 = ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
+        ColumnPtr col2 = ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
+        down_cast<BinaryColumn*>(col1.get())->append_string(full_path);
+        down_cast<BinaryColumn*>(col2.get())->append_string(relative_path);
+        chunk_dst->append_column(std::move(col1), 0);
+        chunk_dst->append_column(std::move(col2), 1);
         *chunk = chunk_dst;
         return Status::EndOfFile("end of file");
     }
@@ -134,6 +140,8 @@ private:
         DCHECK(wg != nullptr);
         return wg->scan_sched_entity();
     }
+
+    std::unique_ptr<RandomAccessFile> _file = nullptr;
 };
 
 

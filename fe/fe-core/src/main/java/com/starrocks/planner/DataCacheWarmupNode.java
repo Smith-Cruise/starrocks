@@ -14,22 +14,54 @@
 
 package com.starrocks.planner;
 
+import com.starrocks.analysis.DescriptorTable;
 import com.starrocks.analysis.TupleDescriptor;
+import com.starrocks.catalog.PartitionKey;
+import com.starrocks.catalog.Table;
+import com.starrocks.connector.RemoteScanRangeLocations;
+import com.starrocks.sql.plan.HDFSScanNodePredicates;
 import com.starrocks.thrift.TDataCacheWarmupNode;
-import com.starrocks.thrift.THdfsFileFormat;
-import com.starrocks.thrift.THdfsScanRange;
 import com.starrocks.thrift.TPlanNode;
 import com.starrocks.thrift.TPlanNodeType;
 import com.starrocks.thrift.TScanRange;
 import com.starrocks.thrift.TScanRangeLocations;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class DataCacheWarmupNode extends ScanNode {
 
-    public DataCacheWarmupNode(PlanNodeId id, TupleDescriptor tupleDescriptor, String planNodeName) {
+    private final RemoteScanRangeLocations scanRangeLocations = new RemoteScanRangeLocations();
+    private final HDFSScanNodePredicates scanNodePredicates = new HDFSScanNodePredicates();
+    private final Table hiveTable;
+
+    private DescriptorTable descTbl;
+
+    public DataCacheWarmupNode(PlanNodeId id, TupleDescriptor tupleDescriptor, String planNodeName, Table hiveTable) {
         super(id, tupleDescriptor, planNodeName);
+        this.hiveTable = hiveTable;
+
+
+        Map<Long, PartitionKey> maps = new HashMap<>();
+        maps.put(0L, new PartitionKey());
+        scanNodePredicates.setIdToPartitionKey(maps);
+        scanNodePredicates.setSelectedPartitionIds(Collections.singletonList(0L));
+    }
+
+    public void setupScanRangeLocations(DescriptorTable descTbl) {
+        this.descTbl = descTbl;
+        scanRangeLocations.setup(descTbl, hiveTable, scanNodePredicates);
+    }
+
+    public HDFSScanNodePredicates getScanNodePredicates() {
+        return this.scanNodePredicates;
+    }
+
+    public String getTableLocation() {
+        return "tablelocation";
     }
 
     @Override
@@ -45,22 +77,11 @@ public class DataCacheWarmupNode extends ScanNode {
 
     @Override
     public List<TScanRangeLocations> getScanRangeLocations(long maxScanRangeLength) {
-        List<TScanRangeLocations> tScanRangeLocationsList = new ArrayList<>();
-        TScanRangeLocations locations = new TScanRangeLocations();
-        THdfsScanRange hdfsScanRange = new THdfsScanRange();
-        hdfsScanRange.setRelative_path("filename");
-        hdfsScanRange.setOffset(0);
-        hdfsScanRange.setLength(1024);
-        hdfsScanRange.setPartition_id(0);
-        hdfsScanRange.setFile_length(1024);
-        hdfsScanRange.setModification_time(System.currentTimeMillis());
-        hdfsScanRange.setFile_format(THdfsFileFormat.PARQUET);
+        return scanRangeLocations.getScanRangeLocations(descTbl, hiveTable, scanNodePredicates);
+    }
 
-        TScanRange scanRange = new TScanRange();
-        scanRange.setHdfs_scan_range(hdfsScanRange);
-        locations.setScan_range(scanRange);
-
-        tScanRangeLocationsList.add(locations);
-        return tScanRangeLocationsList;
+    @Override
+    public String getTableName() {
+        return "datacache table name";
     }
 }

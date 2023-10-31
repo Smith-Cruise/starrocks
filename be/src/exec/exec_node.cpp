@@ -520,7 +520,7 @@ Status ExecNode::create_vectorized_node(starrocks::RuntimeState* state, starrock
         return Status::OK();
     }
     case TPlanNodeType::DATACACHE_WARMUP_NODE: {
-        *node = pool->add(new DatacacheWarmupNode(pool, tnode, descs));
+        *node = pool->add(new DataCacheWarmupNode(pool, tnode, descs));
         return Status::OK();
     }
     case TPlanNodeType::SCHEMA_SCAN_NODE:

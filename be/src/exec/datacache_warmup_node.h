@@ -20,40 +20,18 @@
 
 namespace starrocks {
 
-class DatacacheWarmupNode final : public ScanNode {
+class DataCacheWarmupNode final : public ScanNode {
 public:
-    DatacacheWarmupNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
+    DataCacheWarmupNode(ObjectPool* pool, const TPlanNode& tnode, const DescriptorTbl& descs)
             : ScanNode(pool, tnode, descs) {}
 
-    Status open(starrocks::RuntimeState *state) override {
-        std::cout << "none-pipeline hello world" << std::endl;
-        return Status::OK();
-    }
+    Status open(starrocks::RuntimeState *state) override;
 
-    Status get_next(starrocks::RuntimeState *state, starrocks::ChunkPtr *chunk, bool *eos) override {
-        std::cout << "none-pipeline get next" << std::endl;
-        return Status::OK();
-    }
+    Status get_next(starrocks::RuntimeState *state, starrocks::ChunkPtr *chunk, bool *eos) override;
 
-    Status set_scan_ranges(const std::vector<TScanRangeParams>& scan_ranges) {
-        for(const auto&  param: scan_ranges) {
-            TScanRange scan_range = param.scan_range;
-            std::cout << "none-pipeline" << scan_range.hdfs_scan_range.relative_path << std::endl;
-        }
-        return Status::OK();
-    }
+    Status set_scan_ranges(const std::vector<TScanRangeParams>& scan_ranges) override;
 
-    OpFactories decompose_to_pipeline(pipeline::PipelineBuilderContext *context) override {
-        std::cout << "decompose pipeline dop" << std::endl;
-        size_t dop = 1;
-
-        size_t buffer_capacity = pipeline::ScanOperator::max_buffer_capacity() * dop;
-        pipeline::ChunkBufferLimiterPtr buffer_limiter = std::make_unique<pipeline::DynamicChunkBufferLimiter>(
-                buffer_capacity, buffer_capacity, _mem_limit, runtime_state()->chunk_size());
-
-        auto op_factory = std::make_shared<pipeline::DatacacheWarmupOperatorFactory>(context->next_operator_id(), this, dop, std::move(buffer_limiter));
-        return pipeline::decompose_scan_node_to_pipeline(op_factory, this, context);
-    }
+    OpFactories decompose_to_pipeline(pipeline::PipelineBuilderContext *context) override;
 };
 
 } // namespace starrocks
