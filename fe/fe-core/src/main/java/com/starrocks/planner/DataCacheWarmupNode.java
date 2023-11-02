@@ -16,72 +16,118 @@ package com.starrocks.planner;
 
 import com.starrocks.analysis.DescriptorTable;
 import com.starrocks.analysis.TupleDescriptor;
+import com.starrocks.catalog.HiveTable;
 import com.starrocks.catalog.PartitionKey;
 import com.starrocks.catalog.Table;
-import com.starrocks.connector.RemoteScanRangeLocations;
-import com.starrocks.sql.plan.HDFSScanNodePredicates;
+import com.starrocks.connector.RemoteFileBlockDesc;
+import com.starrocks.connector.RemoteFileDesc;
+import com.starrocks.connector.RemoteFileInfo;
+import com.starrocks.datacache.DataCacheOptions;
+import com.starrocks.server.GlobalStateMgr;
+import com.starrocks.sql.common.ErrorType;
+import com.starrocks.sql.common.StarRocksPlannerException;
+import com.starrocks.thrift.TDataCacheOptions;
 import com.starrocks.thrift.TDataCacheWarmupNode;
+import com.starrocks.thrift.THdfsScanRange;
+import com.starrocks.thrift.TNetworkAddress;
 import com.starrocks.thrift.TPlanNode;
 import com.starrocks.thrift.TPlanNodeType;
 import com.starrocks.thrift.TScanRange;
+import com.starrocks.thrift.TScanRangeLocation;
 import com.starrocks.thrift.TScanRangeLocations;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 public class DataCacheWarmupNode extends ScanNode {
-
-    private final RemoteScanRangeLocations scanRangeLocations = new RemoteScanRangeLocations();
-    private final HDFSScanNodePredicates scanNodePredicates = new HDFSScanNodePredicates();
-    private final Table hiveTable;
+    private final Table table;
 
     private DescriptorTable descTbl;
 
-    public DataCacheWarmupNode(PlanNodeId id, TupleDescriptor tupleDescriptor, String planNodeName, Table hiveTable) {
+    public DataCacheWarmupNode(PlanNodeId id, TupleDescriptor tupleDescriptor, String planNodeName, Table table) {
         super(id, tupleDescriptor, planNodeName);
-        this.hiveTable = hiveTable;
-
-
-        Map<Long, PartitionKey> maps = new HashMap<>();
-        maps.put(0L, new PartitionKey());
-        scanNodePredicates.setIdToPartitionKey(maps);
-        scanNodePredicates.setSelectedPartitionIds(Collections.singletonList(0L));
+        this.table = table;
     }
 
     public void setupScanRangeLocations(DescriptorTable descTbl) {
         this.descTbl = descTbl;
-        scanRangeLocations.setup(descTbl, hiveTable, scanNodePredicates);
-    }
-
-    public HDFSScanNodePredicates getScanNodePredicates() {
-        return this.scanNodePredicates;
     }
 
     public String getTableLocation() {
-        return "tablelocation";
+        return table.getTableLocation();
     }
 
     @Override
     protected void toThrift(TPlanNode msg) {
         msg.node_type = TPlanNodeType.DATACACHE_WARMUP_NODE;
-        TDataCacheWarmupNode node = new TDataCacheWarmupNode();
-        List<String> list = new ArrayList<>();
-        list.add("hello");
-        list.add("world");
-        node.setScan_ranges(list);
-        msg.datacache_warmup_node = node;
+        msg.datacache_warmup_node = new TDataCacheWarmupNode();
     }
 
     @Override
     public List<TScanRangeLocations> getScanRangeLocations(long maxScanRangeLength) {
-        return scanRangeLocations.getScanRangeLocations(descTbl, hiveTable, scanNodePredicates);
+        List<PartitionKey> partitionKeys = Collections.singletonList(new PartitionKey());
+        List<RemoteFileInfo> partitions = GlobalStateMgr.getCurrentState().getMetadataMgr().getRemoteFileInfos(table.getCatalogName(),
+                table, partitionKeys);
+
+        List<TScanRangeLocations> result = new LinkedList<>();
+
+        if (table instanceof HiveTable) {
+            for (RemoteFileInfo partition : partitions) {
+                for (RemoteFileDesc fileDesc : partition.getFiles()) {
+                    if (fileDesc.getLength() == 0) {
+                        continue;
+                    }
+                    for (RemoteFileBlockDesc blockDesc : fileDesc.getBlockDescs()) {
+                        result.add(createScanRangeLocations(partition, fileDesc, blockDesc, null));
+                    }
+                }
+            }
+        } else {
+            throw new RuntimeException("Unsupported");
+        }
+        return result;
     }
 
     @Override
     public String getTableName() {
-        return "datacache table name";
+        return table.getName();
+    }
+
+    private TScanRangeLocations createScanRangeLocations(RemoteFileInfo partition,
+                                                         RemoteFileDesc fileDesc, RemoteFileBlockDesc blockDesc,
+                                                         DataCacheOptions dataCacheOptions) {
+        TScanRangeLocations scanRangeLocations = new TScanRangeLocations();
+
+        THdfsScanRange hdfsScanRange = new THdfsScanRange();
+        hdfsScanRange.setFull_path(partition.getFullPath() + "/" + fileDesc.getFileName());
+        hdfsScanRange.setOffset(blockDesc.getOffset());
+        hdfsScanRange.setLength(blockDesc.getLength());
+        hdfsScanRange.setFile_length(fileDesc.getLength());
+        hdfsScanRange.setModification_time(fileDesc.getModificationTime());
+
+        if (dataCacheOptions != null) {
+            TDataCacheOptions tDataCacheOptions = new TDataCacheOptions();
+            dataCacheOptions.toThrift(tDataCacheOptions);
+            hdfsScanRange.setDatacache_options(tDataCacheOptions);
+        }
+
+        TScanRange scanRange = new TScanRange();
+        scanRange.setHdfs_scan_range(hdfsScanRange);
+        scanRangeLocations.setScan_range(scanRange);
+
+        if (blockDesc.getReplicaHostIds().length == 0) {
+            String message = String.format("hdfs file block has no host. file = %s/%s",
+                    partition.getFullPath(), fileDesc.getFileName());
+            throw new StarRocksPlannerException(message, ErrorType.INTERNAL_ERROR);
+        }
+
+        for (long hostId : blockDesc.getReplicaHostIds()) {
+            String host = blockDesc.getDataNodeIp(hostId);
+            TScanRangeLocation scanRangeLocation = new TScanRangeLocation(new TNetworkAddress(host, -1));
+            scanRangeLocations.addToLocations(scanRangeLocation);
+        }
+
+        return scanRangeLocations;
     }
 }

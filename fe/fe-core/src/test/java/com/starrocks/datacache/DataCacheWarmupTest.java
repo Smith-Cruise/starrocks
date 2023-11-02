@@ -15,10 +15,13 @@
 package com.starrocks.datacache;
 
 import com.starrocks.planner.ScanNode;
+import com.starrocks.qe.ConnectContext;
 import com.starrocks.sql.analyzer.AnalyzeTestUtil;
 import com.starrocks.sql.plan.ConnectorPlanTestBase;
 import com.starrocks.sql.plan.PlanTestBase;
+import com.starrocks.thrift.THdfsScanRange;
 import com.starrocks.thrift.TScanRangeLocations;
+import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
@@ -35,12 +38,22 @@ public class DataCacheWarmupTest extends PlanTestBase {
     }
 
     @Test
-    public void testScanRange() {
-        DataCacheWarmupTask task = new DataCacheWarmupTask("hive0", "datacache_db", "normal_table");
-        ScanNode scanNode = task.genScanNode();
+    public void testGetScanRangeWithoutPartition() {
+        DataCacheWarmupJob job = new DataCacheWarmupJob(new ConnectContext(), "hive0", "datacache_db", "normal_table");
+        job.init();
+        ScanNode scanNode = job.genScanNode();
         List<TScanRangeLocations> scanRanges = scanNode.getScanRangeLocations(0);
-        for (TScanRangeLocations location : scanRanges) {
-            System.out.println(location.scan_range.hdfs_scan_range.full_path);
-        }
+        Assert.assertEquals(2, scanRanges.size());
+        THdfsScanRange scanRange = scanRanges.get(0).scan_range.hdfs_scan_range;
+        Assert.assertEquals("full_path/hello", scanRange.getFull_path());
+
+        scanRange = scanRanges.get(1).scan_range.hdfs_scan_range;
+        Assert.assertEquals("full_path/world", scanRange.getFull_path());
+    }
+
+    @Test
+    public void testGetScanRangesWithPartition() {
+        DataCacheWarmupJob job = new DataCacheWarmupJob(new ConnectContext(), "hive0", "datacache_db", "multi_partition_table");
+        Assert.assertThrows(RuntimeException.class, job::init);
     }
 }

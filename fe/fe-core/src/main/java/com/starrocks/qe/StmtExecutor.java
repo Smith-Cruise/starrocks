@@ -82,6 +82,8 @@ import com.starrocks.common.util.TimeUtils;
 import com.starrocks.common.util.UUIDUtil;
 import com.starrocks.connector.ConnectorMetadata;
 import com.starrocks.connector.exception.RemoteFileNotFoundException;
+import com.starrocks.datacache.DataCacheMgr;
+import com.starrocks.datacache.DataCacheWarmupJob;
 import com.starrocks.http.HttpConnectContext;
 import com.starrocks.http.HttpResultSender;
 import com.starrocks.load.EtlJobType;
@@ -127,6 +129,7 @@ import com.starrocks.sql.ast.AddSqlBlackListStmt;
 import com.starrocks.sql.ast.AnalyzeHistogramDesc;
 import com.starrocks.sql.ast.AnalyzeProfileStmt;
 import com.starrocks.sql.ast.AnalyzeStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateTableAsSelectStmt;
 import com.starrocks.sql.ast.DdlStmt;
 import com.starrocks.sql.ast.DeallocateStmt;
@@ -682,6 +685,8 @@ public class StmtExecutor {
                 handlePrepareStmt(execPlan);
             } else if (parsedStmt instanceof DeallocateStmt) {
                 handleDeallocateStmt();
+            } else if (parsedStmt instanceof CreateDataCacheWarmupJobStmt) {
+                handleCreateDataCacheWarmupJob((CreateDataCacheWarmupJobStmt) parsedStmt);
             } else {
                 context.getState().setError("Do not support this query.");
             }
@@ -1574,6 +1579,57 @@ public class StmtExecutor {
     private void handleUpdateFailPointStatusStmt() throws Exception {
         FailPointExecutor executor = new FailPointExecutor(context, parsedStmt);
         executor.execute();
+    }
+
+    private void handleCreateDataCacheWarmupJob(CreateDataCacheWarmupJobStmt statement) throws Exception {
+        try {
+            long id = statement.getCacheRuleId();
+            boolean isSyncMode = statement.isSyncMode();
+            Map<String, String> properties = statement.getProperties();
+            DataCacheWarmupJob job = DataCacheMgr.getInstance().createWarmupJob(context, id, isSyncMode, properties);
+            job.init();
+            List<RowBatch> rowBatches = job.execute();
+            if (rowBatches.isEmpty()) {
+                return;
+            }
+
+            List<String> colNames = Arrays.asList("Filename", "Cache Size / File Size");
+            List<Expr> outputExprs = Arrays.asList(new StringLiteral(), new StringLiteral());
+
+            MysqlChannel channel = context.getMysqlChannel();
+            boolean isSendFields = false;
+            for (RowBatch rowBatch : rowBatches) {
+                // For some language driver, getting error packet after fields packet will be recognized as a success result
+                // so We need to send fields after first batch arrived
+                if (!isSendFields) {
+                    sendFields(colNames, outputExprs);
+                    isSendFields = true;
+                }
+                if (!isProxy && channel.isSendBufferNull()) {
+                    int bufferSize = 0;
+                    for (ByteBuffer row : rowBatch.getBatch().getRows()) {
+                        bufferSize += (row.position() - row.limit());
+                    }
+                    // +8 for header size
+                    channel.initBuffer(bufferSize + 8);
+                }
+
+                for (ByteBuffer row : rowBatch.getBatch().getRows()) {
+                    if (isProxy) {
+                        proxyResultBuffer.add(row);
+                    } else {
+                        channel.sendOnePacket(row);
+                    }
+                }
+                context.updateReturnRows(rowBatch.getBatch().getRows().size());
+            }
+            if (!isSendFields) {
+                sendFields(colNames, outputExprs);
+            }
+            context.getState().setEof();
+        } catch (Exception e) {
+            // send error msg to mysql-client
+        }
     }
 
     private void handleDeallocateStmt() throws Exception {

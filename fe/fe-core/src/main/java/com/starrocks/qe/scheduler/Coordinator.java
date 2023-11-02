@@ -73,7 +73,7 @@ public abstract class Coordinator {
                                                 Map<String, String> sessionVariables,
                                                 long execMemLimit);
 
-        Coordinator createDatacacheWarmupScheduler(TUniqueId queryId, DescriptorTable descTable,
+        Coordinator createDatacacheWarmupScheduler(TUniqueId queryId, ConnectContext connectContext, DescriptorTable descTable,
                                                    List<PlanFragment> fragments,
                                                    List<ScanNode> scanNodes, String timezone, long startTime);
     }

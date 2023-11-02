@@ -3014,7 +3014,7 @@ public class AstBuilder extends StarRocksBaseVisitor<ParseNode> {
     public ParseNode visitCreateDataCacheWarmupJob(StarRocksParser.CreateDataCacheWarmupJobContext ctx) {
         long cacheRuleId = Long.parseLong(ctx.INTEGER_VALUE().getText());
 
-        boolean isSyncMode = (ctx.ASYNC() != null);
+        boolean isSyncMode = (ctx.ASYNC() == null);
 
         Map<String, String> properties = null;
         if (ctx.properties() != null) {

@@ -14,32 +14,30 @@
 
 #pragma once
 
-#include "exec/pipeline/scan/scan_operator.h"
 #include "exec/pipeline/scan/balanced_chunk_buffer.h"
+#include "exec/pipeline/scan/scan_operator.h"
 #include "exec/workgroup/work_group.h"
+#include "io/cache_input_stream.h"
 
 namespace starrocks::pipeline {
 
 class DatacacheWarmupOperatorFactory final : public ScanOperatorFactory {
 public:
-    DatacacheWarmupOperatorFactory(int32_t id, ScanNode* scan_node, size_t dop,
-                                   ChunkBufferLimiterPtr buffer_limiter) : ScanOperatorFactory(id, scan_node),
-              _chunk_buffer(BalanceStrategy::kDirect, dop, std::move(buffer_limiter)){}
+    DatacacheWarmupOperatorFactory(int32_t id, ScanNode* scan_node, size_t dop, ChunkBufferLimiterPtr buffer_limiter)
+            : ScanOperatorFactory(id, scan_node),
+              _chunk_buffer(BalanceStrategy::kDirect, dop, std::move(buffer_limiter)) {}
 
     ~DatacacheWarmupOperatorFactory() override = default;
 
     bool with_morsels() const override { return true; }
 
-    Status do_prepare(RuntimeState* state) override {
-        return Status::OK();
-    }
-    void do_close(RuntimeState* state) override {
-        std::cout << "warmup operator factory close" << std::endl;
-    }
+    Status do_prepare(RuntimeState* state) override { return Status::OK(); }
+    void do_close(RuntimeState* state) override { std::cout << "warmup operator factory close" << std::endl; }
 
     BalancedChunkBuffer& get_chunk_buffer() { return _chunk_buffer; }
 
     OperatorPtr do_create(int32_t dop, int32_t driver_sequence) override;
+
 private:
     BalancedChunkBuffer _chunk_buffer;
 };
@@ -51,12 +49,8 @@ public:
 
     ~DatacacheWarmupOperator() override = default;
 
-    Status do_prepare(RuntimeState* state) override {
-        return Status::OK();
-    }
-    void do_close(RuntimeState* state) override {
-        std::cout << "operator do_close" << std::endl;
-    }
+    Status do_prepare(RuntimeState* state) override { return Status::OK(); }
+    void do_close(RuntimeState* state) override { std::cout << "operator do_close" << std::endl; }
     ChunkSourcePtr create_chunk_source(MorselPtr morsel, int32_t chunk_source_index) override;
 
 private:
@@ -70,79 +64,97 @@ private:
         }
         return nullptr;
     }
-    size_t num_buffered_chunks() const override {
-        return _chunk_buffer.size(_driver_sequence);
-    }
-    size_t buffer_size() const override {
-        return _chunk_buffer.limiter()->size();
-    }
-    size_t buffer_capacity() const override {
-        return _chunk_buffer.limiter()->capacity();
-    }
-    size_t buffer_memory_usage() const override {
-        return _chunk_buffer.memory_usage();
-    }
-    size_t default_buffer_capacity() const override {
-        return _chunk_buffer.limiter()->default_capacity();
-    }
-    ChunkBufferTokenPtr pin_chunk(int num_chunks) override {
-        return _chunk_buffer.limiter()->pin(num_chunks);
-    }
-    bool is_buffer_full() const override {
-        return _chunk_buffer.limiter()->is_full();
-    }
-    void set_buffer_finished() override {
-        return _chunk_buffer.set_finished(_driver_sequence);
-    }
+    size_t num_buffered_chunks() const override { return _chunk_buffer.size(_driver_sequence); }
+    size_t buffer_size() const override { return _chunk_buffer.limiter()->size(); }
+    size_t buffer_capacity() const override { return _chunk_buffer.limiter()->capacity(); }
+    size_t buffer_memory_usage() const override { return _chunk_buffer.memory_usage(); }
+    size_t default_buffer_capacity() const override { return _chunk_buffer.limiter()->default_capacity(); }
+    ChunkBufferTokenPtr pin_chunk(int num_chunks) override { return _chunk_buffer.limiter()->pin(num_chunks); }
+    bool is_buffer_full() const override { return _chunk_buffer.limiter()->is_full(); }
+    void set_buffer_finished() override { return _chunk_buffer.set_finished(_driver_sequence); }
 
     BalancedChunkBuffer& _chunk_buffer;
 };
 
-
 class DatacacheWarmupChunkSource final : public ChunkSource {
 public:
-    DatacacheWarmupChunkSource(ScanOperator* op, RuntimeProfile* runtime_profile, MorselPtr&& morsel, BalancedChunkBuffer& chunk_buffer)
-            : ChunkSource(op, runtime_profile, std::move(morsel), chunk_buffer) {
-
-    }
+    DatacacheWarmupChunkSource(ScanOperator* op, RuntimeProfile* runtime_profile, MorselPtr&& morsel,
+                               BalancedChunkBuffer& chunk_buffer)
+            : ChunkSource(op, runtime_profile, std::move(morsel), chunk_buffer) {}
 
     ~DatacacheWarmupChunkSource() override = default;
 
-    Status prepare(starrocks::RuntimeState *state) override {
+    Status prepare(starrocks::RuntimeState* state) override {
         RETURN_IF_ERROR(ChunkSource::prepare(state));
         return Status::OK();
     }
 
-    void close(starrocks::RuntimeState *state) override {
-        std::cout << "warmup chunk source closed" << std::endl;
-    }
+    void close(starrocks::RuntimeState* state) override { std::cout << "warmup chunk source closed" << std::endl; }
+
 private:
-    Status _read_chunk(starrocks::RuntimeState *state, starrocks::ChunkPtr *chunk) override {
-        std::cout << "end of file" << std::endl;
+    Status _read_chunk(starrocks::RuntimeState* state, starrocks::ChunkPtr* chunk) override {
         ScanMorsel* scan_morsel = down_cast<ScanMorsel*>(_morsel.get());
-        std::cout << "file path " << scan_morsel->get_scan_range()->hdfs_scan_range.relative_path << std::endl;
-        TScanRange* scan_range = scan_morsel->get_scan_range();
-        std::string full_path = scan_range->hdfs_scan_range.__isset.full_path ? scan_range->hdfs_scan_range.full_path : "empty";
-        std::string relative_path = scan_range->hdfs_scan_range.__isset.relative_path ? scan_range->hdfs_scan_range.relative_path : "empty";
+        if (!scan_morsel->get_scan_range()->__isset.hdfs_scan_range) {
+            return Status::InternalError("hdfs_scan_range not existed");
+        }
+        if (!scan_morsel->get_scan_range()->hdfs_scan_range.__isset.full_path) {
+            return Status::InternalError("full_path not existed");
+        }
+        const THdfsScanRange& scan_range = scan_morsel->get_scan_range()->hdfs_scan_range;
+        const std::string& full_path = scan_range.full_path;
+        int64_t file_length = scan_range.file_length;
+        int64_t modification_time = scan_range.modification_time;
+
+        FSOptions fs_options{};
+        ASSIGN_OR_RETURN(auto fs, FileSystem::CreateUniqueFromString(full_path, fs_options));
+
+        ASSIGN_OR_RETURN(std::unique_ptr<RandomAccessFile> raw_file, fs->new_random_access_file(full_path));
+
+        std::shared_ptr<io::SeekableInputStream> input_stream = raw_file->stream();
+        auto shared_input_stream =
+                std::make_shared<io::SharedBufferedInputStream>(input_stream, raw_file->filename(), file_length);
+
+        auto cache_input_stream = std::make_shared<io::CacheInputStream>(shared_input_stream, raw_file->filename(),
+                                                                         file_length, modification_time);
+        cache_input_stream->set_enable_populate_cache(true);
+        cache_input_stream->set_enable_block_buffer(config::datacache_block_buffer_enable);
+        shared_input_stream->set_align_size(cache_input_stream->get_align_size());
+
+        std::vector<char> tmp_data;
+        tmp_data.reserve(file_length);
+        RETURN_IF_ERROR(cache_input_stream->read(tmp_data.data(), file_length));
+
+        const io::CacheInputStream::Stats& stats = cache_input_stream->stats();
 
         ChunkPtr chunk_dst = std::make_shared<Chunk>();
-        ColumnPtr col1 = ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
-        ColumnPtr col2 = ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
-        down_cast<BinaryColumn*>(col1.get())->append_string(full_path);
-        down_cast<BinaryColumn*>(col2.get())->append_string(relative_path);
-        chunk_dst->append_column(std::move(col1), 0);
-        chunk_dst->append_column(std::move(col2), 1);
+
+        // file name
+        ColumnPtr col_filename =
+                ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
+        down_cast<BinaryColumn*>(col_filename.get())->append_string(full_path);
+        chunk_dst->append_column(std::move(col_filename), 0);
+
+        // cache / file size
+        ColumnPtr col_filesize =
+                ColumnHelper::create_column(TypeDescriptor::from_logical_type(LogicalType::TYPE_VARCHAR), false);
+        down_cast<BinaryColumn*>(col_filesize.get())
+                ->append_string(strings::Substitute("$0 / $1", stats.write_cache_bytes, file_length));
+        chunk_dst->append_column(std::move(col_filesize), 1);
+
+        std::cout << strings::Substitute("filename: $0, length: $1, cache size: $2", raw_file->filename(), file_length,
+                                         stats.write_cache_bytes)
+                  << std::endl;
+
         *chunk = chunk_dst;
         return Status::EndOfFile("end of file");
     }
 
-    const workgroup::WorkGroupScanSchedEntity * _scan_sched_entity(const workgroup::WorkGroup *wg) const override {
+    const workgroup::WorkGroupScanSchedEntity* _scan_sched_entity(const workgroup::WorkGroup* wg) const override {
         DCHECK(wg != nullptr);
         return wg->scan_sched_entity();
     }
 
     std::unique_ptr<RandomAccessFile> _file = nullptr;
 };
-
 
 } // namespace starrocks::pipeline

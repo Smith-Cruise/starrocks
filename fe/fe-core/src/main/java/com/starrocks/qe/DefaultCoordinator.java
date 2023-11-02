@@ -212,15 +212,16 @@ public class DefaultCoordinator extends Coordinator {
         }
 
         @Override
-        public Coordinator createDatacacheWarmupScheduler(TUniqueId queryId, DescriptorTable descTable,
+        public Coordinator createDatacacheWarmupScheduler(TUniqueId queryId, ConnectContext connectContext,
+                                                          DescriptorTable descTable,
                                                           List<PlanFragment> fragments,
                                                           List<ScanNode> scanNodes, String timezone, long startTime) {
-            ConnectContext context = new ConnectContext();
-            context.setQualifiedUser(AuthenticationMgr.ROOT_USER);
-            context.setCurrentUserIdentity(UserIdentity.ROOT);
-            context.setCurrentRoleIds(Sets.newHashSet(PrivilegeBuiltinConstants.ROOT_ROLE_ID));
-            context.getSessionVariable().setEnablePipelineEngine(true);
-            context.getSessionVariable().setPipelineDop(0);
+            //            ConnectContext context = new ConnectContext();
+            //            context.setQualifiedUser(AuthenticationMgr.ROOT_USER);
+            //            context.setCurrentUserIdentity(UserIdentity.ROOT);
+            //            context.setCurrentRoleIds(Sets.newHashSet(PrivilegeBuiltinConstants.ROOT_ROLE_ID));
+            //            context.getSessionVariable().setEnablePipelineEngine(true);
+            //            context.getSessionVariable().setPipelineDop(0);
 
             TQueryOptions queryOptions = new TQueryOptions();
 
@@ -232,9 +233,9 @@ public class DefaultCoordinator extends Coordinator {
                     .scanNodes(scanNodes)
                     .descTable(descTable.toThrift())
                     .queryGlobals(queryGlobals)
-                    .commonProperties(context)
+                    .commonProperties(connectContext)
                     .build();
-            return new DefaultCoordinator(context, jobSpec);
+            return new DefaultCoordinator(connectContext, jobSpec);
         }
 
         @Override

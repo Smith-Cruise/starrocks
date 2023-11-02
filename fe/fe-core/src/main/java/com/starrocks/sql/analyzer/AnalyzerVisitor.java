@@ -54,6 +54,7 @@ import com.starrocks.sql.ast.ClearDataCacheRulesStmt;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -74,6 +75,7 @@ import com.starrocks.sql.ast.DeleteStmt;
 import com.starrocks.sql.ast.DescStorageVolumeStmt;
 import com.starrocks.sql.ast.DropCatalogStmt;
 import com.starrocks.sql.ast.DropDataCacheRuleStmt;
+import com.starrocks.sql.ast.DropDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.DropDbStmt;
 import com.starrocks.sql.ast.DropFileStmt;
 import com.starrocks.sql.ast.DropFunctionStmt;
@@ -116,6 +118,7 @@ import com.starrocks.sql.ast.ShowBasicStatsMetaStmt;
 import com.starrocks.sql.ast.ShowCatalogsStmt;
 import com.starrocks.sql.ast.ShowCreateDbStmt;
 import com.starrocks.sql.ast.ShowDataCacheRulesStmt;
+import com.starrocks.sql.ast.ShowDataCacheWarmupJobsStmt;
 import com.starrocks.sql.ast.ShowDynamicPartitionStmt;
 import com.starrocks.sql.ast.ShowExportStmt;
 import com.starrocks.sql.ast.ShowGrantsStmt;
@@ -730,6 +733,24 @@ public class AnalyzerVisitor extends AstVisitor<Void, ConnectContext> {
 
     @Override
     public Void visitClearDataCacheRulesStatement(ClearDataCacheRulesStmt statement, ConnectContext context) {
+        DataCacheStmtAnalyzer.analyze(statement, context);
+        return null;
+    }
+
+    @Override
+    public Void visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement, ConnectContext context) {
+        DataCacheStmtAnalyzer.analyze(statement, context);
+        return null;
+    }
+
+    @Override
+    public Void visitShowDataCacheWarmupJobsStatement(ShowDataCacheWarmupJobsStmt statement, ConnectContext context) {
+        DataCacheStmtAnalyzer.analyze(statement, context);
+        return null;
+    }
+
+    @Override
+    public Void visitDropDataCacheWarmupJobStatement(DropDataCacheWarmupJobStmt statement, ConnectContext context) {
         DataCacheStmtAnalyzer.analyze(statement, context);
         return null;
     }

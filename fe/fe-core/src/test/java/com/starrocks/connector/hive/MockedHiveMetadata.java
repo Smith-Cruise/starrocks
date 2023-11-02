@@ -1007,7 +1007,11 @@ public class MockedHiveMetadata implements ConnectorMetadata {
                         ImmutableList.of(
                                 new RemoteFileDesc("hello", "gzip", 1024, 1,
                                         ImmutableList.of(
-                                                new RemoteFileBlockDesc(10, 10, hostIds, null, hiveRemoteFileIO)), null)),
+                                                new RemoteFileBlockDesc(10, 10, hostIds, null, hiveRemoteFileIO)), null),
+                                new RemoteFileDesc("world", "gzip", 2048, 1,
+                                        ImmutableList.of(
+                                                new RemoteFileBlockDesc(0, 100, hostIds, null, hiveRemoteFileIO)), null)),
+
                 "full_path");
     }
 

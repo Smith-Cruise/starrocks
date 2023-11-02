@@ -14,11 +14,12 @@
 
 package com.starrocks.sql.ast;
 
+import com.starrocks.analysis.RedirectStatus;
 import com.starrocks.sql.parser.NodePosition;
 
 import java.util.Map;
 
-public class CreateDataCacheWarmupJobStmt extends DdlStmt {
+public class CreateDataCacheWarmupJobStmt extends StatementBase {
     private final long cacheRuleId;
     private final boolean isSyncMode;
     private final Map<String, String> properties;
@@ -44,5 +45,10 @@ public class CreateDataCacheWarmupJobStmt extends DdlStmt {
     @Override
     public <R, C> R accept(AstVisitor<R, C> visitor, C context) {
         return visitor.visitCreateDataCacheWarmupJobStatement(this, context);
+    }
+
+    @Override
+    public RedirectStatus getRedirectStatus() {
+        return RedirectStatus.FORWARD_WITH_SYNC;
     }
 }

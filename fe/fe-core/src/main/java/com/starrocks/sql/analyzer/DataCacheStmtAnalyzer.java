@@ -22,6 +22,7 @@ import com.starrocks.catalog.Column;
 import com.starrocks.catalog.Database;
 import com.starrocks.catalog.Table;
 import com.starrocks.datacache.DataCacheMgr;
+import com.starrocks.datacache.DataCacheRule;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.server.CatalogMgr;
 import com.starrocks.server.GlobalStateMgr;
@@ -125,9 +126,18 @@ public class DataCacheStmtAnalyzer {
             if (!statement.isSyncMode()) {
                 throw new SemanticException("DataCache only support sync warmup mode now");
             }
+            if (statement.getProperties() != null) {
+                throw new SemanticException("DataCache warmup don't support specific properties now");
+            }
+
             long cacheRuleId = statement.getCacheRuleId();
-            if (!dataCacheMgr.isExistCacheRule(cacheRuleId)) {
+            Optional<DataCacheRule> rule = dataCacheMgr.getCacheRule(cacheRuleId);
+            if (!rule.isPresent()) {
                 throw new SemanticException(String.format("DataCache warmup job's rule id %d not existed", cacheRuleId));
+            }
+
+            if (rule.get().getPredicates() != null) {
+                throw new SemanticException("DataCache warmup job don't support predicates in partition column now");
             }
             return null;
         }

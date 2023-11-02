@@ -30,14 +30,14 @@ Status DataCacheWarmupNode::set_scan_ranges(const std::vector<TScanRangeParams>&
 
 OpFactories DataCacheWarmupNode::decompose_to_pipeline(pipeline::PipelineBuilderContext* context) {
     std::cout << "decompose pipeline dop" << std::endl;
-    size_t dop = 1;
+    size_t dop = context->dop_of_source_operator(id());
     size_t buffer_capacity = pipeline::ScanOperator::max_buffer_capacity() * dop;
     pipeline::ChunkBufferLimiterPtr buffer_limiter = std::make_unique<pipeline::DynamicChunkBufferLimiter>(
             buffer_capacity, buffer_capacity, _mem_limit, runtime_state()->chunk_size());
 
-    auto op_factory = std::make_shared<pipeline::DatacacheWarmupOperatorFactory>(context->next_operator_id(), this, dop, std::move(buffer_limiter));
+    auto op_factory = std::make_shared<pipeline::DatacacheWarmupOperatorFactory>(context->next_operator_id(), this, dop,
+                                                                                 std::move(buffer_limiter));
     return pipeline::decompose_scan_node_to_pipeline(op_factory, this, context);
 }
-
 
 } // namespace starrocks

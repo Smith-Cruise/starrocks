@@ -15,7 +15,7 @@
 package com.starrocks.datacache;
 
 import com.starrocks.analysis.Expr;
-import com.starrocks.qe.ShowResultSet;
+import com.starrocks.qe.ConnectContext;
 import com.starrocks.sql.analyzer.SemanticException;
 import com.starrocks.sql.ast.QualifiedName;
 
@@ -30,7 +30,6 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class DataCacheMgr {
-
     private static final DataCacheMgr INSTANCE = new DataCacheMgr();
 
     private final AtomicLong ids = new AtomicLong();
@@ -107,6 +106,16 @@ public class DataCacheMgr {
 
         try {
             return idToCacheRuleMap.containsKey(id);
+        } finally {
+            readUnlock();
+        }
+    }
+
+    public Optional<DataCacheRule> getCacheRule(long ruleId) {
+        readLock();
+        try {
+            DataCacheRule rule = idToCacheRuleMap.get(ruleId);
+            return Optional.ofNullable(rule);
         } finally {
             readUnlock();
         }
@@ -209,9 +218,25 @@ public class DataCacheMgr {
         }
     }
 
-    public ShowResultSet createWarmupJob() {
-        DataCacheWarmupTask task = new DataCacheWarmupTask("emr_hive_test", "chendingchao", "array_prune_parquet");
-        return task.execute();
+    public DataCacheWarmupJob createWarmupJob(ConnectContext connectContext, long id, boolean isSyncMode,
+                                              Map<String, String> properties) {
+        Optional<DataCacheRule> rule = getCacheRule(id);
+        if (!rule.isPresent()) {
+            throw new RuntimeException(String.format("DataCache rule id %d not existed", id));
+        }
+        if (!isSyncMode) {
+            throw new RuntimeException("Warmup only support sync mode now");
+        }
+
+        if (properties != null) {
+            throw new RuntimeException("Warmup not support properties now");
+        }
+
+        QualifiedName qualifiedName = rule.get().getTarget();
+        String catalogName = qualifiedName.getParts().get(0);
+        String dbName = qualifiedName.getParts().get(1);
+        String tblName = qualifiedName.getParts().get(2);
+        return new DataCacheWarmupJob(connectContext, catalogName, dbName, tblName);
     }
 
     private boolean isMatchAll(String pattern) {

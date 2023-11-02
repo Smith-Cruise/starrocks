@@ -64,7 +64,6 @@ import com.starrocks.sql.ast.ClearDataCacheRulesStmt;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
-import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -84,6 +83,7 @@ import com.starrocks.sql.ast.CreateViewStmt;
 import com.starrocks.sql.ast.DropAnalyzeJobStmt;
 import com.starrocks.sql.ast.DropCatalogStmt;
 import com.starrocks.sql.ast.DropDataCacheRuleStmt;
+import com.starrocks.sql.ast.DropDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.DropDbStmt;
 import com.starrocks.sql.ast.DropFileStmt;
 import com.starrocks.sql.ast.DropFunctionStmt;
@@ -112,6 +112,7 @@ import com.starrocks.sql.ast.RevokePrivilegeStmt;
 import com.starrocks.sql.ast.RevokeRoleStmt;
 import com.starrocks.sql.ast.SetDefaultStorageVolumeStmt;
 import com.starrocks.sql.ast.SetUserPropertyStmt;
+import com.starrocks.sql.ast.ShowDataCacheWarmupJobsStmt;
 import com.starrocks.sql.ast.StatementBase;
 import com.starrocks.sql.ast.StopRoutineLoadStmt;
 import com.starrocks.sql.ast.SubmitTaskStmt;
@@ -991,10 +992,23 @@ public class DDLStmtExecutor {
             });
             return null;
         }
+
         @Override
-        public ShowResultSet visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement,
-                                                                    ConnectContext context) {
-            return DataCacheMgr.getInstance().createWarmupJob();
+        public ShowResultSet visitShowDataCacheWarmupJobsStatement(ShowDataCacheWarmupJobsStmt statement,
+                                                                   ConnectContext context) {
+            ErrorReport.wrapWithRuntimeException(() -> {
+                throw new RuntimeException("Unsupported now");
+            });
+            return null;
+        }
+
+        @Override
+        public ShowResultSet visitDropDataCacheWarmupJobStatement(DropDataCacheWarmupJobStmt statement,
+                                                                  ConnectContext context) {
+            ErrorReport.wrapWithRuntimeException(() -> {
+                throw new RuntimeException("Unsupported now");
+            });
+            return null;
         }
     }
 
