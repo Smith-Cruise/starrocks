@@ -267,6 +267,9 @@ statement
     | showDataCacheRulesStatement
     | dropDataCacheRuleStatement
     | clearDataCacheRulesStatement
+    | createDataCacheWarmupJob
+    | showDataCacheWarmupJobs
+    | dropDataCacheWarmupJob
 
     // Export Statement
     | exportStatement
@@ -1768,6 +1771,18 @@ dropDataCacheRuleStatement
 
 clearDataCacheRulesStatement
     : CLEAR DATACACHE RULES
+    ;
+
+createDataCacheWarmupJob
+    : CREATE DATACACHE WARMUP JOB AS queryStatement properties?
+    ;
+
+showDataCacheWarmupJobs
+    : SHOW DATACACHE WARMUP JOBS
+    ;
+
+dropDataCacheWarmupJob
+    : DROP DATACACHE WARMUP JOB INTEGER_VALUE
     ;
 
 // ------------------------------------------- Export Statement --------------------------------------------------------

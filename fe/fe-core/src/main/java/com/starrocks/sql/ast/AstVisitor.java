@@ -750,6 +750,18 @@ public abstract class AstVisitor<R, C> {
         return visitStatement(statement, context);
     }
 
+    public R visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement, C context) {
+        return visitStatement(statement, context);
+    }
+
+    public R visitDropDataCacheWarmupJobStatement(DropDataCacheWarmupJobStmt statement, C context) {
+        return visitStatement(statement, context);
+    }
+
+    public R visitShowDataCacheWarmupJobsStatement(ShowDataCacheWarmupJobsStmt statement, C context) {
+        return visitStatement(statement, context);
+    }
+
     // --------------------------------------- Export Statement --------------------------------------------------------
 
     public R visitExportStatement(ExportStmt statement, C context) {

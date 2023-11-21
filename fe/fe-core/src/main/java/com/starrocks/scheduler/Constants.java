@@ -40,6 +40,7 @@ public class Constants {
         MV,
         INSERT,
         PIPE,
+        WARMUP
     }
 
     // PENDING -> RUNNING -> FAILED

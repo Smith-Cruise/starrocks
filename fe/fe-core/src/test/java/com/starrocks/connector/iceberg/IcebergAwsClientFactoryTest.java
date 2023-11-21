@@ -71,4 +71,15 @@ public class IcebergAwsClientFactoryTest {
         URI uriWithHttp = IcebergAwsClientFactory.ensureSchemeInEndpoint("http://s3.aa-bbbbb-3.amazonaws.com.cn");
         Assert.assertEquals("http://s3.aa-bbbbb-3.amazonaws.com.cn", uriWithHttp.toString());
     }
+
+    @Test
+    public void otherTest() {
+        IcebergAwsClientFactory factory = new IcebergAwsClientFactory();
+        Map<String, String> properties = new HashMap<>();
+        properties.put("aws.s3.access_key", "ak");
+        properties.put("aws.s3.secret_key", "sk");
+        properties.put("aws.s3.endpoint", "endpoint");
+        factory.initialize(properties);
+        S3Client s3Client = factory.s3();
+    }
 }
