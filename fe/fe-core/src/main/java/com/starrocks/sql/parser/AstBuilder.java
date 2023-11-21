@@ -3025,6 +3025,14 @@ public class AstBuilder extends StarRocksBaseVisitor<ParseNode> {
         return new CreateDataCacheWarmupJobStmt(queryStatement, sqlStartIndex, sqlEndIndex, true, properties, createPos(ctx));
     }
 
+    // -- blackhole --
+    @Override
+    public ParseNode visitBlackHoleAsQueryStatement(StarRocksParser.BlackHoleAsQueryStatementContext ctx) {
+        QueryStatement queryStatement = (QueryStatement) visitQueryStatement(ctx.queryStatement());
+        queryStatement.setEnableBlackHoleSink(true);
+        return queryStatement;
+    }
+
     // ----------------------------------------------- Export Statement ------------------------------------------------
     @Override
     public ParseNode visitExportStatement(StarRocksParser.ExportStatementContext context) {

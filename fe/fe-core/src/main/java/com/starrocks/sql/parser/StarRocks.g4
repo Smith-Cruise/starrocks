@@ -316,6 +316,9 @@ statement
     | executeStatement
     | deallocateStatement
 
+    // blackhole stmt
+    | blackHoleAsQueryStatement
+
     // Unsupported Statement
     | unsupportedStatement
     ;
@@ -2381,6 +2384,12 @@ frameBound
     | expression boundType=(PRECEDING | FOLLOWING)  #boundedFrame
     ;
 
+
+// --- block hole ----
+blackHoleAsQueryStatement
+    : BLACKHOLE AS queryStatement
+    ;
+
 // ------------------------------------------- COMMON AST --------------------------------------------------------------
 
 tableDesc
@@ -2671,7 +2680,7 @@ number
 nonReserved
     : ACCESS | ACTIVE | AFTER | AGGREGATE | APPLY | ASYNC | AUTHORS | AVG | ADMIN | ANTI | AUTHENTICATION | AUTO_INCREMENT
     | ARRAY_AGG
-    | BACKEND | BACKENDS | BACKUP | BEGIN | BITMAP_UNION | BLACKLIST | BINARY | BODY | BOOLEAN | BROKER | BUCKETS
+    | BACKEND | BACKENDS | BACKUP | BEGIN | BITMAP_UNION | BLACKLIST | BLACKHOLE | BINARY | BODY | BOOLEAN | BROKER | BUCKETS
     | BUILTIN | BASE
     | CAST | CANCEL | CATALOG | CATALOGS | CEIL | CHAIN | CHARSET | CLEAN | CLEAR | CLUSTER | CLUSTERS | CURRENT | COLLATION | COLUMNS
     | CUME_DIST | CUMULATIVE | COMMENT | COMMIT | COMMITTED | COMPUTE | CONNECTION | CONSISTENT | COSTS | COUNT
