@@ -305,6 +305,9 @@ public class HeartbeatMgr extends FrontendDaemon {
                     if (tBackendInfo.isSetReboot_time()) {
                         backendHbResponse.setRebootTime(tBackendInfo.getReboot_time());
                     }
+                    if (tBackendInfo.isSetDatacache_metrics()) {
+                        backendHbResponse.setDatacacheMetrics(tBackendInfo.datacache_metrics);
+                    }
                     return backendHbResponse;
                 } else {
                     return new BackendHbResponse(computeNodeId,

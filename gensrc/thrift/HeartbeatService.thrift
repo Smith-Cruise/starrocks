@@ -43,6 +43,7 @@ struct TBackendInfo {
     7: optional Types.TPort starlet_port
     8: optional i64 reboot_time
     9: optional bool is_set_storage_path
+    10: optional map<string, string> datacache_metrics
 }
 
 struct THeartbeatResult {

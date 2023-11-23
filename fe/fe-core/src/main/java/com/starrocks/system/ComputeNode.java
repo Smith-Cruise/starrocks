@@ -40,6 +40,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
@@ -107,6 +108,8 @@ public class ComputeNode implements IComputable, Writable {
     // It must be true for Backend
     @SerializedName("isSetStoragePath")
     private volatile boolean isSetStoragePath = false;
+
+    private volatile Map<String, String> datacacheMetrics = new ConcurrentHashMap<>();
 
     private volatile int numRunningQueries = 0;
     private volatile long memLimitBytes = 0;
@@ -461,6 +464,10 @@ public class ComputeNode implements IComputable, Writable {
         return cpuCores;
     }
 
+    public Map<String, String> getDatacacheMetrics() {
+        return datacacheMetrics;
+    }
+
     /**
      * handle Compute node's heartbeat response.
      * return true if any port changed, or alive state is changed.
@@ -531,6 +538,11 @@ public class ComputeNode implements IComputable, Writable {
                 if (!GlobalStateMgr.isCheckpointThread()) {
                     BackendCoreStat.setNumOfHardwareCoresOfBe(hbResponse.getBeId(), hbResponse.getCpuCores());
                 }
+            }
+
+            if (!hbResponse.getDatacacheMetrics().isEmpty()) {
+                this.datacacheMetrics.clear();
+                this.datacacheMetrics.putAll(hbResponse.getDatacacheMetrics());
             }
 
             heartbeatErrMsg = "";

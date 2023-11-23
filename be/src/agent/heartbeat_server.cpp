@@ -50,6 +50,7 @@
 #include "util/debug_util.h"
 #include "util/network_util.h"
 #include "util/thrift_server.h"
+#include "block_cache/block_cache.h"
 
 using std::fstream;
 using std::nothrow;
@@ -110,6 +111,11 @@ void HeartbeatServer::heartbeat(THeartbeatResult& heartbeat_result, const TMaste
     }
 
     static auto num_hardware_cores = static_cast<int32_t>(CpuInfo::num_cores());
+    std::map<string, string> datacache_metrics{};
+    if (config::datacache_enable) {
+        BlockCache* cache = BlockCache::instance();
+        datacache_metrics.emplace("hello", strings::Substitute("world $0", reboot_time));
+    }
     if (res.ok()) {
         heartbeat_result.backend_info.__set_be_port(config::be_port);
         heartbeat_result.backend_info.__set_http_port(config::be_http_port);
@@ -130,6 +136,7 @@ void HeartbeatServer::heartbeat(THeartbeatResult& heartbeat_result, const TMaste
             reboot_time = static_cast<int64_t>(currTime);
         }
         heartbeat_result.backend_info.__set_reboot_time(reboot_time);
+        heartbeat_result.backend_info.__set_datacache_metrics(datacache_metrics);
     }
 }
 

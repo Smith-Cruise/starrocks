@@ -57,6 +57,7 @@ import org.apache.logging.log4j.Logger;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
 public class BackendsProcDir implements ProcDirInterface {
@@ -70,7 +71,8 @@ public class BackendsProcDir implements ProcDirInterface {
                 .add("Alive").add("SystemDecommissioned").add("ClusterDecommissioned").add("TabletNum")
                 .add("DataUsedCapacity").add("AvailCapacity").add("TotalCapacity").add("UsedPct")
                 .add("MaxDiskUsedPct").add("ErrMsg").add("Version").add("Status").add("DataTotalCapacity")
-                .add("DataUsedPct").add("CpuCores").add("NumRunningQueries").add("MemUsedPct").add("CpuUsedPct");
+                .add("DataUsedPct").add("CpuCores").add("NumRunningQueries").add("MemUsedPct").add("CpuUsedPct")
+                .add("DataCacheStatus");
         if (RunMode.allowCreateLakeTable()) {
             builder.add("StarletPort").add("WorkerId");
         }
@@ -198,6 +200,17 @@ public class BackendsProcDir implements ProcDirInterface {
                 backendInfo.add(String.valueOf(backend.getStarletPort()));
                 long workerId = GlobalStateMgr.getCurrentStarOSAgent().getWorkerIdByBackendId(backendId);
                 backendInfo.add(String.valueOf(workerId));
+            }
+
+            if (backend.getDatacacheMetrics().isEmpty()) {
+                backendInfo.add("Not configured or not received heartbeats");
+            } else {
+                StringBuilder stringBuilder = new StringBuilder();
+
+                for (Map.Entry<String, String> entry : backend.getDatacacheMetrics().entrySet()) {
+                    stringBuilder.append(String.format("%s->%s,", entry.getKey(), entry.getValue()));
+                }
+                backendInfo.add(stringBuilder.toString());
             }
 
             comparableBackendInfos.add(backendInfo);

@@ -40,6 +40,8 @@ import com.starrocks.common.io.Writable;
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Backend heartbeat response contains Backend's be port, http port and brpc port
@@ -63,6 +65,7 @@ public class BackendHbResponse extends HeartbeatResponse implements Writable {
     private int cpuCores;
     @SerializedName(value = "rebootTime")
     private long rebootTime = -1L;
+    private Map<String, String> datacacheMetrics = Collections.emptyMap();
     private boolean isSetStoragePath = false;
 
     public BackendHbResponse() {
@@ -102,6 +105,14 @@ public class BackendHbResponse extends HeartbeatResponse implements Writable {
 
     public void setRebootTime(long rebootTime) {
         this.rebootTime = rebootTime * 1000;
+    }
+
+    public void setDatacacheMetrics(Map<String, String> metrics) {
+        this.datacacheMetrics = metrics;
+    }
+
+    public Map<String, String> getDatacacheMetrics() {
+        return datacacheMetrics;
     }
 
     public long getBeId() {
