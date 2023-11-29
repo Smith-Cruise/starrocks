@@ -20,6 +20,7 @@ import com.google.common.collect.Maps;
 import com.starrocks.analysis.Expr;
 import com.starrocks.analysis.RedirectStatus;
 import com.starrocks.analysis.TableName;
+import com.starrocks.catalog.BlackHoleTable;
 import com.starrocks.catalog.Column;
 import com.starrocks.catalog.Table;
 import com.starrocks.catalog.TableFunctionTable;
@@ -92,6 +93,7 @@ public class InsertStmt extends DmlStmt {
 
     // tableFunctionAsTargetTable is true if insert statement is parsed from INSERT INTO FILES(..)
     private final boolean tableFunctionAsTargetTable;
+    private final boolean blackHoleTableAsTargetTable;
     private final Map<String, String> tableFunctionProperties;
 
     public InsertStmt(TableName tblName, PartitionNames targetPartitionNames, String label, List<String> cols,
@@ -110,6 +112,7 @@ public class InsertStmt extends DmlStmt {
         this.isOverwrite = isOverwrite;
         this.tableFunctionAsTargetTable = false;
         this.tableFunctionProperties = null;
+        this.blackHoleTableAsTargetTable = false;
     }
 
     // Ctor for CreateTableAsSelectStmt
@@ -123,6 +126,7 @@ public class InsertStmt extends DmlStmt {
         this.forCTAS = true;
         this.tableFunctionAsTargetTable = false;
         this.tableFunctionProperties = null;
+        this.blackHoleTableAsTargetTable = false;
     }
 
     // Ctor for INSERT INTO FILES(...)
@@ -134,6 +138,18 @@ public class InsertStmt extends DmlStmt {
         this.queryStatement = queryStatement;
         this.tableFunctionAsTargetTable = true;
         this.tableFunctionProperties = tableFunctionProperties;
+        this.blackHoleTableAsTargetTable = false;
+    }
+
+    public InsertStmt(QueryStatement queryStatement, NodePosition pos) {
+        super(pos);
+        this.tblName = new TableName("black_hole_catalog", "black_hole_db", "black_hole_table");
+        this.targetColumnNames = null;
+        this.targetPartitionNames = null;
+        this.queryStatement = queryStatement;
+        this.tableFunctionAsTargetTable = false;
+        this.tableFunctionProperties = null;
+        this.blackHoleTableAsTargetTable = true;
     }
 
     public Table getTargetTable() {
@@ -269,17 +285,28 @@ public class InsertStmt extends DmlStmt {
         return tableFunctionAsTargetTable;
     }
 
+    public boolean useBlackHoleTableAsTargetTable() {
+        return blackHoleTableAsTargetTable;
+    }
+
     public Map<String, String> getTableFunctionProperties() {
         return tableFunctionProperties;
     }
 
-    public Table makeTableFunctionTable() {
-        checkState(tableFunctionAsTargetTable, "tableFunctionAsTargetTable is false");
-        // fetch schema from query
+    private List<Column> collectSelectedFieldsFromQueryStatement() {
         QueryRelation query = getQueryStatement().getQueryRelation();
         List<Field> allFields = query.getRelationFields().getAllFields();
-        List<Column> columns = allFields.stream().filter(Field::isVisible).map(field -> new Column(field.getName(),
+        return allFields.stream().filter(Field::isVisible).map(field -> new Column(field.getName(),
                 field.getType(), field.isNullable())).collect(Collectors.toList());
+    }
+
+    public Table makeBlackHoleTable() {
+        return new BlackHoleTable(collectSelectedFieldsFromQueryStatement());
+    }
+
+    public Table makeTableFunctionTable() {
+        checkState(tableFunctionAsTargetTable, "tableFunctionAsTargetTable is false");
+        List<Column> columns = collectSelectedFieldsFromQueryStatement();
 
         // parse table function properties
         Map<String, String> props = getTableFunctionProperties();
