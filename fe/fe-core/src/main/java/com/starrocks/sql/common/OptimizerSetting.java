@@ -16,13 +16,25 @@ package com.starrocks.sql.common;
 
 public class OptimizerSetting {
     private final boolean reuseViewDef;
+    private final boolean isDataCacheSample;
+    private final boolean isDataCacheWarmup;
 
     public boolean isReuseViewDef() {
         return reuseViewDef;
     }
 
+    public boolean isDataCacheSample() {
+        return isDataCacheSample;
+    }
+
+    public boolean isDataCacheWarmup() {
+        return isDataCacheWarmup;
+    }
+
     private OptimizerSetting(Builder builder) {
         this.reuseViewDef = builder.reuseViewDef;
+        this.isDataCacheSample = builder.isDataCacheSample;
+        this.isDataCacheWarmup = builder.isDataCacheWarmup;
     }
 
     public static OptimizerSetting.Builder builder() {
@@ -33,8 +45,21 @@ public class OptimizerSetting {
 
         private boolean reuseViewDef;
 
+        private boolean isDataCacheSample = false;
+        private boolean isDataCacheWarmup = false;
+
         public Builder setReuseViewDef(boolean reuseViewDef) {
             this.reuseViewDef = reuseViewDef;
+            return this;
+        }
+
+        public Builder setDataCacheWarmup(boolean dataCacheWarmup) {
+            isDataCacheWarmup = dataCacheWarmup;
+            return this;
+        }
+
+        public Builder setDataCacheSample(boolean dataCacheSample) {
+            isDataCacheSample = dataCacheSample;
             return this;
         }
 

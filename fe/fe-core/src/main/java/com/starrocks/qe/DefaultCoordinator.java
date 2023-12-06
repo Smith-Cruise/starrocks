@@ -310,6 +310,11 @@ public class DefaultCoordinator extends Coordinator {
     }
 
     @Override
+    public long getDataCacheWarmupBytes() {
+        return queryProfile.getDataCacheWarmupBytes();
+    }
+
+    @Override
     public Map<String, String> getLoadCounters() {
         return queryProfile.getLoadCounters();
     }
@@ -883,6 +888,7 @@ public class DefaultCoordinator extends Coordinator {
             lock();
             try {
                 queryProfile.updateLoadInformation(execState, params);
+                queryProfile.updateDataCacheWarmup(params);
             } finally {
                 unlock();
             }

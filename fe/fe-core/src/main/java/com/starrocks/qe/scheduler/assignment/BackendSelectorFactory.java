@@ -55,6 +55,10 @@ public class BackendSelectorFactory {
             return new NoopBackendSelector();
         }
 
+        if (connectContext.getOptimizerSetting().isPresent() && connectContext.getOptimizerSetting().get().isDataCacheSample()) {
+            locations = locations.subList(0, 1);
+        }
+
         SessionVariable sessionVariable = connectContext.getSessionVariable();
         FragmentScanRangeAssignment assignment = execFragment.getScanRangeAssignment();
 

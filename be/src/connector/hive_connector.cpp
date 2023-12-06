@@ -348,6 +348,7 @@ void HiveDataSource::_init_counter(RuntimeState* state) {
     _profile.rows_read_counter = ADD_COUNTER(_runtime_profile, "RowsRead", TUnit::UNIT);
     _profile.rows_skip_counter = ADD_COUNTER(_runtime_profile, "RowsSkip", TUnit::UNIT);
     _profile.scan_ranges_counter = ADD_COUNTER(_runtime_profile, "ScanRanges", TUnit::UNIT);
+    _profile.scan_ranges_size = ADD_COUNTER(_runtime_profile, "ScanRangesSize", TUnit::BYTES);
 
     _profile.reader_init_timer = ADD_TIMER(_runtime_profile, "ReaderInit");
     _profile.open_file_timer = ADD_TIMER(_runtime_profile, "OpenFile");
@@ -678,6 +679,7 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
     ASSIGN_OR_RETURN(auto fs, FileSystem::CreateUniqueFromString(native_file_path, fsOptions));
 
     COUNTER_UPDATE(_profile.scan_ranges_counter, 1);
+    COUNTER_UPDATE(_profile.scan_ranges_size, scan_range.length);
     HdfsScannerParams scanner_params;
     scanner_params.runtime_filter_collector = _runtime_filters;
     scanner_params.scan_ranges = {&scan_range};

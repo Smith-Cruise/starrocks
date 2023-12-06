@@ -1645,6 +1645,14 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
         this.enableScanDataCache = enableScanDataCache;
     }
 
+    public boolean isEnablePopulateDataCache() {
+        return enablePopulateDataCache;
+    }
+
+    public void setEnablePopulateDatacache(boolean enablePopulateDataCache) {
+        this.enablePopulateDataCache = enablePopulateDataCache;
+    }
+
     public boolean isCboUseDBLock() {
         return cboUseDBLock;
     }

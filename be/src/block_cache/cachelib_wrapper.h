@@ -56,6 +56,8 @@ public:
 
     Status remove(const std::string& key) override;
 
+    const starcache::CacheMetrics cache_metrics() override;
+
     std::unordered_map<std::string, double> cache_stats() override;
 
     void record_read_remote(size_t size, int64_t lateny_us) override;

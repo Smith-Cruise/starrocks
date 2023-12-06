@@ -17,7 +17,9 @@ package com.starrocks.qe;
 import com.google.common.collect.Lists;
 import com.starrocks.analysis.FunctionName;
 import com.starrocks.analysis.ParseNode;
+import com.starrocks.catalog.Column;
 import com.starrocks.catalog.Database;
+import com.starrocks.catalog.ScalarType;
 import com.starrocks.common.AlreadyExistsException;
 import com.starrocks.common.Config;
 import com.starrocks.common.DdlException;
@@ -25,11 +27,15 @@ import com.starrocks.common.ErrorCode;
 import com.starrocks.common.ErrorReport;
 import com.starrocks.common.MetaNotFoundException;
 import com.starrocks.common.UserException;
+import com.starrocks.datacache.DataCacheDetector;
 import com.starrocks.datacache.DataCacheMgr;
 import com.starrocks.load.EtlJobType;
 import com.starrocks.scheduler.Constants;
+import com.starrocks.scheduler.ExecuteOption;
+import com.starrocks.scheduler.SubmitResult;
 import com.starrocks.scheduler.Task;
 import com.starrocks.scheduler.TaskManager;
+import com.starrocks.server.GlobalStateMgr;
 import com.starrocks.sql.ast.AdminCancelRepairTableStmt;
 import com.starrocks.sql.ast.AdminCheckTabletsStmt;
 import com.starrocks.sql.ast.AdminRepairTableStmt;
@@ -64,6 +70,7 @@ import com.starrocks.sql.ast.ClearDataCacheRulesStmt;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -132,10 +139,13 @@ import org.apache.parquet.Strings;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 public class DDLStmtExecutor {
 
@@ -996,6 +1006,46 @@ public class DDLStmtExecutor {
                 DataCacheMgr.getInstance().clearRules();
             });
             return null;
+        }
+
+        @Override
+        public ShowResultSet visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement,
+                                                                    ConnectContext context) {
+            Column column = new Column("Status", ScalarType.createDefaultString());
+            ShowResultSetMetaData metaData = new ShowResultSetMetaData(Collections.singletonList(column));
+            List<List<String>> rows = new ArrayList<>();
+            List<String> row = new ArrayList<>();
+
+            try {
+
+                final String SELECT_SQL = statement.getQuerySql();
+                {
+                    DataCacheDetector detector =
+                            new DataCacheDetector(SELECT_SQL, context.getCurrentCatalog(), context.getDatabase());
+                    long estimateSize = detector.getEstimateSize();
+                }
+                String uniqueName = UUID.randomUUID().toString();
+                Task task = new Task(uniqueName);
+                task.setSource(Constants.TaskSource.DATACACHE_WARMUP);
+                task.setCreateTime(System.currentTimeMillis());
+                task.setDefinition(statement.getQuerySql());
+                //            Map<String, String> properties = statement.getProperties();
+                Map<String, String> properties = new HashMap<>();
+                task.setProperties(properties);
+                rows.add(row);
+
+                GlobalStateMgr.getCurrentState().getTaskManager().createTask(task, false);
+                ExecuteOption option = new ExecuteOption();
+                option.setSync(true);
+                SubmitResult submitResult =
+                        GlobalStateMgr.getCurrentState().getTaskManager().executeTask(uniqueName, option);
+                row.add(submitResult.getStatus().name());
+            } catch (Exception e) {
+                System.out.println(e.getMessage());
+                row.add("failed");
+            }
+            rows.add(row);
+            return new ShowResultSet(metaData, rows);
         }
     }
 

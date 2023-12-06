@@ -166,6 +166,7 @@ import com.starrocks.sql.ast.CompactionClause;
 import com.starrocks.sql.ast.CreateAnalyzeJobStmt;
 import com.starrocks.sql.ast.CreateCatalogStmt;
 import com.starrocks.sql.ast.CreateDataCacheRuleStmt;
+import com.starrocks.sql.ast.CreateDataCacheWarmupJobStmt;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateFileStmt;
 import com.starrocks.sql.ast.CreateFunctionStmt;
@@ -3014,6 +3015,15 @@ public class AstBuilder extends StarRocksBaseVisitor<ParseNode> {
     @Override
     public ParseNode visitClearDataCacheRulesStatement(StarRocksParser.ClearDataCacheRulesStatementContext ctx) {
         return new ClearDataCacheRulesStmt(createPos(ctx));
+    }
+
+    @Override
+    public ParseNode visitCreateDataCacheWarmupJob(StarRocksParser.CreateDataCacheWarmupJobContext ctx) {
+        QueryStatement queryStatement = (QueryStatement) visit(ctx.queryStatement());
+        int sqlStartIndex = ctx.queryStatement().start.getStartIndex();
+        int sqlEndIndex = ctx.queryStatement().stop.getStopIndex();
+
+        return new CreateDataCacheWarmupJobStmt(queryStatement, sqlStartIndex, sqlEndIndex, createPos(ctx));
     }
 
     // ----------------------------------------------- Export Statement ------------------------------------------------

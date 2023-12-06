@@ -520,6 +520,7 @@ void QueryContextManager::collect_query_statistics(const PCollectQueryStatistics
 
 void QueryContextManager::report_fragments(
         const std::vector<PipeLineReportTaskKey>& pipeline_need_report_query_fragment_ids) {
+    std::cout << "start to report fragments" << std::endl;
     std::vector<std::shared_ptr<FragmentContext>> need_report_fragment_context;
     std::vector<std::shared_ptr<QueryContext>> need_report_query_ctx;
 

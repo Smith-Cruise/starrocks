@@ -42,6 +42,7 @@
 #include <fstream>
 
 #include "agent/master_info.h"
+#include "block_cache/block_cache.h"
 #include "common/status.h"
 #include "gen_cpp/HeartbeatService.h"
 #include "runtime/heartbeat_flags.h"
@@ -123,6 +124,32 @@ void HeartbeatServer::heartbeat(THeartbeatResult& heartbeat_result, const TMaste
             heartbeat_result.backend_info.__set_is_set_storage_path(false);
         }
 #endif
+
+        if (config::datacache_enable) {
+            const BlockCache* cache = BlockCache::instance();
+            const starcache::CacheMetrics& metrics = cache->cache_metrics();
+            TDataCacheMetrics t_metrics{};
+
+            switch (metrics.status) {
+            case starcache::CacheStatus::NORMAL:
+                t_metrics.__set_status(TDataCacheStatus::NORMAL);
+                break;
+            case starcache::CacheStatus::UPDATING:
+                t_metrics.__set_status(TDataCacheStatus::UPDATING);
+                break;
+            default:
+                t_metrics.__set_status(TDataCacheStatus::ABNORMAL);
+            }
+
+            t_metrics.__set_disk_quota_bytes(metrics.disk_quota_bytes);
+            t_metrics.__set_disk_used_bytes(metrics.disk_used_bytes);
+            t_metrics.__set_mem_quota_bytes(metrics.mem_quota_bytes);
+            t_metrics.__set_mem_used_bytes(metrics.mem_used_bytes);
+            t_metrics.__set_meta_used_bytes(metrics.meta_used_bytes);
+
+            heartbeat_result.backend_info.__set_datacache_metrics(t_metrics);
+        }
+
         heartbeat_result.backend_info.__set_version(get_short_version());
         heartbeat_result.backend_info.__set_num_hardware_cores(num_hardware_cores);
         if (reboot_time == 0) {

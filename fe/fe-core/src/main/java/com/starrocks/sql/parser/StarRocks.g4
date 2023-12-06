@@ -267,6 +267,7 @@ statement
     | showDataCacheRulesStatement
     | dropDataCacheRuleStatement
     | clearDataCacheRulesStatement
+    | createDataCacheWarmupJob
 
     // Export Statement
     | exportStatement
@@ -1770,6 +1771,10 @@ clearDataCacheRulesStatement
     : CLEAR DATACACHE RULES
     ;
 
+createDataCacheWarmupJob
+    : CREATE DATACACHE WARMUP JOB queryStatement
+    ;
+
 // ------------------------------------------- Export Statement --------------------------------------------------------
 
 exportStatement
@@ -2688,7 +2693,7 @@ nonReserved
     | TRIGGERS | TRUNCATE | TYPE | TYPES
     | UNBOUNDED | UNCOMMITTED | UNSET | UNINSTALL | USAGE | USER | USERS | UNLOCK
     | VALUE | VARBINARY | VARIABLES | VIEW | VIEWS | VERBOSE | VOLUME | VOLUMES
-    | WARNINGS | WEEK | WHITELIST | WORK | WRITE  | WAREHOUSE | WAREHOUSES
+    | WARNINGS | WEEK | WHITELIST | WORK | WRITE  | WAREHOUSE | WAREHOUSES | WARMUP
     | YEAR
     | DOTDOTDOT
     ;

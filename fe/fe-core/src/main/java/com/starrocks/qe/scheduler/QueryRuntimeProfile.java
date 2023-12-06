@@ -120,6 +120,8 @@ public class QueryRuntimeProfile {
     // ------------------------------------------------------------------------------------
     private final List<TSinkCommitInfo> sinkCommitInfos = Lists.newArrayList();
 
+    private long datacacheWarmupWriteBytes = 0;
+
     public QueryRuntimeProfile(ConnectContext connectContext,
                                JobSpec jobSpec,
                                int numFragments) {
@@ -283,6 +285,18 @@ public class QueryRuntimeProfile {
     public void finalizeProfile() {
         fragmentProfiles.forEach(RuntimeProfile::sortChildren);
     }
+
+
+    public void updateDataCacheWarmup(TReportExecStatusParams params) {
+        if (params.isSetDatacache_warmup_bytes()) {
+            datacacheWarmupWriteBytes += params.datacache_warmup_bytes;
+        }
+    }
+
+    public long getDataCacheWarmupBytes() {
+        return datacacheWarmupWriteBytes;
+    }
+
 
     public void updateLoadInformation(FragmentInstanceExecState execState, TReportExecStatusParams params) {
         if (params.isSetDelta_urls()) {

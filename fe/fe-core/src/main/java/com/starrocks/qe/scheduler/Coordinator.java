@@ -167,6 +167,8 @@ public abstract class Coordinator {
 
     public abstract List<String> getDeltaUrls();
 
+    public abstract long getDataCacheWarmupBytes();
+
     public abstract Map<String, String> getLoadCounters();
 
     public abstract List<TTabletFailInfo> getFailInfos();

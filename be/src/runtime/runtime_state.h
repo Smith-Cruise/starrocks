@@ -288,6 +288,8 @@ public:
 
     void update_num_bytes_scan_from_source(int64_t scan_bytes) { _num_bytes_scan_from_source.fetch_add(scan_bytes); }
 
+    int64_t num_datacache_warmup_bytes() { return _datacache_warmup_bytes.load(); }
+
     void update_report_load_status(TReportExecStatusParams* load_params) {
         load_params->__set_loaded_rows(num_rows_load_sink());
         load_params->__set_sink_load_bytes(num_bytes_load_sink());
@@ -296,7 +298,13 @@ public:
         load_params->__set_filtered_rows(num_rows_load_filtered());
         load_params->__set_unselected_rows(num_rows_load_unselected());
         load_params->__set_source_scan_bytes(num_bytes_scan_from_source());
+        load_params->__set_datacache_warmup_bytes(num_datacache_warmup_bytes());
+        std::cout << "datacache warmup bytes" << num_datacache_warmup_bytes() << std::endl;
     }
+
+    std::atomic<int64_t> _datacache_warmup_bytes{0};
+
+    void update_datacache_warmup_byes(int64_t num_bytes) { _datacache_warmup_bytes.fetch_add(num_bytes); }
 
     std::atomic_int64_t* mutable_total_spill_bytes();
 
