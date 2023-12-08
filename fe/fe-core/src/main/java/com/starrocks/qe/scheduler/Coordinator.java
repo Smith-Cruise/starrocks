@@ -17,6 +17,7 @@ package com.starrocks.qe.scheduler;
 import com.starrocks.analysis.DescriptorTable;
 import com.starrocks.common.Status;
 import com.starrocks.common.util.RuntimeProfile;
+import com.starrocks.datacache.DataCacheWarmupMetrics;
 import com.starrocks.planner.PlanFragment;
 import com.starrocks.planner.ScanNode;
 import com.starrocks.planner.StreamLoadPlanner;
@@ -105,6 +106,8 @@ public abstract class Coordinator {
 
     public abstract String getSchedulerExplain();
 
+    public abstract Map<Long, Long> getBackendTotalScanRangeSize();
+
     public abstract void updateFragmentExecStatus(TReportExecStatusParams params);
 
     public abstract void updateAuditStatistics(TReportAuditStatisticsParams params);
@@ -167,7 +170,7 @@ public abstract class Coordinator {
 
     public abstract List<String> getDeltaUrls();
 
-    public abstract long getDataCacheWarmupBytes();
+    public abstract DataCacheWarmupMetrics getDataCacheWarmupBytes();
 
     public abstract Map<String, String> getLoadCounters();
 

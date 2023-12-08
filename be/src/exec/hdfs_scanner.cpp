@@ -331,9 +331,8 @@ void HdfsScanner::update_counter() {
         COUNTER_UPDATE(profile->datacache_write_fail_bytes, stats.write_cache_fail_bytes);
         COUNTER_UPDATE(profile->datacache_read_block_buffer_counter, stats.read_block_buffer_count);
         COUNTER_UPDATE(profile->datacache_read_block_buffer_bytes, stats.read_block_buffer_bytes);
-
-        _runtime_state->update_datacache_warmup_byes(stats.read_cache_count);
     }
+
     if (_shared_buffered_input_stream) {
         COUNTER_UPDATE(profile->shared_buffered_shared_io_count, _shared_buffered_input_stream->shared_io_count());
         COUNTER_UPDATE(profile->shared_buffered_shared_io_bytes, _shared_buffered_input_stream->shared_io_bytes());
@@ -350,6 +349,15 @@ void HdfsScanner::update_counter() {
         COUNTER_UPDATE(profile->fs_bytes_read_counter, _fs_stats.bytes_read);
         COUNTER_UPDATE(profile->fs_io_timer, _fs_stats.io_ns);
         COUNTER_UPDATE(profile->fs_io_counter, _fs_stats.io_count);
+    }
+
+    if (_runtime_state->query_options().enable_warmup_datacache) {
+        _runtime_state->update_datacache_warmup_need_bytes(_app_stats.bytes_read);
+        if (_scanner_params.use_datacache && _cache_input_stream) {
+            const io::CacheInputStream::Stats& stats = _cache_input_stream->stats();
+            _runtime_state->update_datacache_warmup_read_bytes(stats.read_cache_bytes);
+            _runtime_state->update_datacache_warmup_write_bytes(stats.write_cache_bytes);
+        }
     }
 
     // update scanner private profile.

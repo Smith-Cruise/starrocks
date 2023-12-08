@@ -158,6 +158,7 @@ public class TaskRun implements Comparable<TaskRun> {
             runCtx.setParentConnectContext(parentRunCtx);
         }
         runCtx.setGlobalStateMgr(GlobalStateMgr.getCurrentState());
+        runCtx.setCurrentCatalog(task.getCatalogName());
         runCtx.setDatabase(task.getDbName());
         runCtx.setQualifiedUser(status.getUser());
         runCtx.setCurrentUserIdentity(UserIdentity.createAnalyzedUserIdentWithIp(status.getUser(), "%"));

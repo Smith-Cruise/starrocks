@@ -36,6 +36,7 @@ import com.starrocks.qe.scheduler.WorkerProvider;
 import com.starrocks.qe.scheduler.dag.ExecutionFragment;
 import com.starrocks.thrift.TScanRangeLocations;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
@@ -55,8 +56,11 @@ public class BackendSelectorFactory {
             return new NoopBackendSelector();
         }
 
-        if (connectContext.getOptimizerSetting().isPresent() && connectContext.getOptimizerSetting().get().isDataCacheSample()) {
-            locations = locations.subList(0, 1);
+        if (connectContext.getOptimizerSetting().isPresent() &&
+                connectContext.getOptimizerSetting().get().isEnableSampleDataCache()) {
+            Collections.shuffle(locations);
+            int sampleSize = Math.min(10, locations.size());
+            locations = locations.subList(0, sampleSize);
         }
 
         SessionVariable sessionVariable = connectContext.getSessionVariable();

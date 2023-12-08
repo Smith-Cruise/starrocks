@@ -82,6 +82,14 @@ public class DataCacheMetrics {
         return String.format("%s/%s", convertSize(diskUsedBytes), convertSize(diskQuotaBytes));
     }
 
+    public long getDiskQuotaBytes() {
+        return diskQuotaBytes;
+    }
+
+    public long getMemQuoteBytes() {
+        return memQuoteBytes;
+    }
+
     public String getMetaUsage() {
         return String.format("%s", convertSize(metaUsedBytes));
     }
@@ -93,6 +101,6 @@ public class DataCacheMetrics {
     private static String convertSize(long size) {
         double base1Gigabytes = 1024 * 1024 * 1024;
         double res = size / base1Gigabytes;
-        return String.format("%.2fGb", res);
+        return String.format("%.2fGB", res);
     }
 }

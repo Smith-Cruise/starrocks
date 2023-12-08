@@ -53,6 +53,7 @@ import com.starrocks.common.util.AuditStatisticsUtil;
 import com.starrocks.common.util.DebugUtil;
 import com.starrocks.common.util.RuntimeProfile;
 import com.starrocks.connector.exception.RemoteFileNotFoundException;
+import com.starrocks.datacache.DataCacheWarmupMetrics;
 import com.starrocks.planner.PlanFragment;
 import com.starrocks.planner.ResultSink;
 import com.starrocks.planner.RuntimeFilterDescription;
@@ -310,8 +311,8 @@ public class DefaultCoordinator extends Coordinator {
     }
 
     @Override
-    public long getDataCacheWarmupBytes() {
-        return queryProfile.getDataCacheWarmupBytes();
+    public DataCacheWarmupMetrics getDataCacheWarmupBytes() {
+        return queryProfile.getDataCacheWarmupMetrics();
     }
 
     @Override
@@ -483,6 +484,18 @@ public class DefaultCoordinator extends Coordinator {
         return executionDAG.getFragmentsInPreorder().stream()
                 .map(ExecutionFragment::getExplainString)
                 .collect(Collectors.joining("\n"));
+    }
+
+    @Override
+    public Map<Long, Long> getBackendTotalScanRangeSize() {
+        Map<Long, Long> map = new HashMap<>();
+        executionDAG.getFragmentsInPreorder().forEach(fragment -> {
+            Map<Long, Long> tmpMap = fragment.getBackendScanRangeSize();
+            for (Map.Entry<Long, Long> each : tmpMap.entrySet()) {
+                map.merge(each.getKey(), each.getValue(), Long::sum);
+            }
+        });
+        return map;
     }
 
     private void prepareProfile() {

@@ -713,7 +713,9 @@ struct TReportExecStatusParams {
 
   27: optional string rejected_record_path
 
-  28: optional i64 datacache_warmup_bytes
+  28: optional i64 datacache_warmup_need_bytes
+  29: optional i64 datacache_warmup_read_bytes
+  30: optional i64 datacache_warmup_write_bytes
 }
 
 struct TAuditStatistics {

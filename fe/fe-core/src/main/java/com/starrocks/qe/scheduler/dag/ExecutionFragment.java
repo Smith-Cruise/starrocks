@@ -42,6 +42,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -107,6 +108,27 @@ public class ExecutionFragment {
             builder.addValue("INSTANCES", () -> instances.forEach(instance -> instance.buildExplainString(builder)));
         });
         return builder.build();
+    }
+
+    public Map<Long, Long> getBackendScanRangeSize() {
+        Map<Long, Long> map = new HashMap<>();
+        instances.forEach(instance -> {
+            long totalSize = 0;
+            Map<Integer, List<TScanRangeParams>> node2ScanRanges = instance.getNode2ScanRanges();
+            for (Map.Entry<Integer, List<TScanRangeParams>> entry : node2ScanRanges.entrySet()) {
+                for (TScanRangeParams scanRage : entry.getValue()) {
+                    if (!scanRage.isSetScan_range()) {
+                        continue;
+                    }
+                    if (!scanRage.getScan_range().isSetHdfs_scan_range()) {
+                        continue;
+                    }
+                    totalSize += scanRage.getScan_range().hdfs_scan_range.length;
+                }
+            }
+            map.put(instance.getWorkerId(), totalSize);
+        });
+        return map;
     }
 
     public int getFragmentIndex() {

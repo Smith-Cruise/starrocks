@@ -246,7 +246,9 @@ struct TQueryOptions {
 
   112: optional bool enable_pipeline_level_shuffle;
 
-  113: optional bool enable_datacache_warmup
+  113: optional bool enable_warmup_datacache;
+  114: optional i64 datacache_priority;
+  115: optional i64 datacache_ttl;
 }
 
 

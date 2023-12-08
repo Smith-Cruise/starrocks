@@ -1248,6 +1248,16 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
     @VariableMgr.VarAttr(name = ENABLE_POPULATE_DATACACHE, alias = ENABLE_POPULATE_BLOCK_CACHE)
     private boolean enablePopulateDataCache = true;
 
+    @VariableMgr.VarAttr(name = "enable_warmup_datacache")
+    private boolean enableWarmupDataCache = false;
+    public void setEnableWarmupDataCache(boolean enableWarmupDataCache) {
+        this.enableWarmupDataCache = enableWarmupDataCache;
+    }
+    @VariableMgr.VarAttr(name = "datacache_priority")
+    private int datacachePriority = 0;
+    @VariableMgr.VarAttr(name = "datacache_ttl")
+    private int datacacheTTL = 0;
+
     @VariableMgr.VarAttr(name = ENABLE_DYNAMIC_PRUNE_SCAN_RANGE)
     private boolean enableDynamicPruneScanRange = true;
 
@@ -2994,6 +3004,8 @@ public class SessionVariable implements Serializable, Writable, Cloneable {
         tResult.setScan_use_query_mem_ratio(scanUseQueryMemRatio);
         tResult.setEnable_collect_table_level_scan_stats(enableCollectTableLevelScanStats);
         tResult.setEnable_pipeline_level_shuffle(enablePipelineLevelShuffle);
+        // datacache
+        tResult.setEnable_warmup_datacache(enableWarmupDataCache);
         return tResult;
     }
 

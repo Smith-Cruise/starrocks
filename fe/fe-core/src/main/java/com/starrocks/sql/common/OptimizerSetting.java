@@ -16,25 +16,25 @@ package com.starrocks.sql.common;
 
 public class OptimizerSetting {
     private final boolean reuseViewDef;
-    private final boolean isDataCacheSample;
-    private final boolean isDataCacheWarmup;
+    private final boolean enableSampleDataCache;
+    private final boolean enableWarmupDataCache;
 
     public boolean isReuseViewDef() {
         return reuseViewDef;
     }
 
-    public boolean isDataCacheSample() {
-        return isDataCacheSample;
+    public boolean isEnableSampleDataCache() {
+        return enableSampleDataCache;
     }
 
-    public boolean isDataCacheWarmup() {
-        return isDataCacheWarmup;
+    public boolean isEnableWarmupDataCache() {
+        return enableWarmupDataCache;
     }
 
     private OptimizerSetting(Builder builder) {
         this.reuseViewDef = builder.reuseViewDef;
-        this.isDataCacheSample = builder.isDataCacheSample;
-        this.isDataCacheWarmup = builder.isDataCacheWarmup;
+        this.enableSampleDataCache = builder.enableDataCacheSample;
+        this.enableWarmupDataCache = builder.enableCollectDataCacheSize;
     }
 
     public static OptimizerSetting.Builder builder() {
@@ -45,21 +45,21 @@ public class OptimizerSetting {
 
         private boolean reuseViewDef;
 
-        private boolean isDataCacheSample = false;
-        private boolean isDataCacheWarmup = false;
+        private boolean enableDataCacheSample = false;
+        private boolean enableCollectDataCacheSize = false;
 
         public Builder setReuseViewDef(boolean reuseViewDef) {
             this.reuseViewDef = reuseViewDef;
             return this;
         }
 
-        public Builder setDataCacheWarmup(boolean dataCacheWarmup) {
-            isDataCacheWarmup = dataCacheWarmup;
+        public Builder setEnableDataCacheSample(boolean enableDataCacheSample) {
+            this.enableDataCacheSample = enableDataCacheSample;
             return this;
         }
 
-        public Builder setDataCacheSample(boolean dataCacheSample) {
-            isDataCacheSample = dataCacheSample;
+        public Builder setEnableCollectDataCacheSize(boolean enableCollectDataCacheSize) {
+            this.enableCollectDataCacheSize = enableCollectDataCacheSize;
             return this;
         }
 

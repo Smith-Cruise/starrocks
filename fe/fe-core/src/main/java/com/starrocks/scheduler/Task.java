@@ -17,6 +17,7 @@ package com.starrocks.scheduler;
 
 import com.google.gson.annotations.SerializedName;
 import com.starrocks.authentication.AuthenticationMgr;
+import com.starrocks.catalog.InternalCatalog;
 import com.starrocks.cluster.ClusterNamespace;
 import com.starrocks.common.io.Text;
 import com.starrocks.common.io.Writable;
@@ -52,6 +53,9 @@ public class Task implements Writable {
 
     @SerializedName("dbName")
     private String dbName;
+
+    @SerializedName("catalogName")
+    private String catalogName = InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME;
 
     @SerializedName("definition")
     private String definition;
@@ -138,6 +142,14 @@ public class Task implements Writable {
     public void setDbName(String dbName) {
         // compatible with old version
         this.dbName = ClusterNamespace.getFullName(dbName);
+    }
+
+    public String getCatalogName() {
+        return catalogName;
+    }
+
+    public void setCatalogName(String catalogName) {
+        this.catalogName = catalogName;
     }
 
     public String getDefinition() {

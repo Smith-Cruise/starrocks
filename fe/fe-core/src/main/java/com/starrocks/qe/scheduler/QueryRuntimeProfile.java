@@ -28,6 +28,7 @@ import com.starrocks.common.util.ProfileManager;
 import com.starrocks.common.util.ProfilingExecPlan;
 import com.starrocks.common.util.RuntimeProfile;
 import com.starrocks.common.util.concurrent.MarkedCountDownLatch;
+import com.starrocks.datacache.DataCacheWarmupMetrics;
 import com.starrocks.load.loadv2.LoadJob;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.qe.SessionVariable;
@@ -120,7 +121,7 @@ public class QueryRuntimeProfile {
     // ------------------------------------------------------------------------------------
     private final List<TSinkCommitInfo> sinkCommitInfos = Lists.newArrayList();
 
-    private long datacacheWarmupWriteBytes = 0;
+    private final DataCacheWarmupMetrics dataCacheWarmupMetrics = new DataCacheWarmupMetrics();
 
     public QueryRuntimeProfile(ConnectContext connectContext,
                                JobSpec jobSpec,
@@ -288,15 +289,20 @@ public class QueryRuntimeProfile {
 
 
     public void updateDataCacheWarmup(TReportExecStatusParams params) {
-        if (params.isSetDatacache_warmup_bytes()) {
-            datacacheWarmupWriteBytes += params.datacache_warmup_bytes;
+        if (params.isSetDatacache_warmup_need_bytes()) {
+            dataCacheWarmupMetrics.updateDataCacheWarmupNeedBytes(params.datacache_warmup_need_bytes);
+        }
+        if (params.isSetDatacache_warmup_read_bytes()) {
+            dataCacheWarmupMetrics.updateDataCacheWarmupReadBytes(params.datacache_warmup_read_bytes);
+        }
+        if (params.isSetDatacache_warmup_write_bytes()) {
+            dataCacheWarmupMetrics.updateDataCacheWarmupWriteBytes(params.datacache_warmup_write_bytes);
         }
     }
 
-    public long getDataCacheWarmupBytes() {
-        return datacacheWarmupWriteBytes;
+    public DataCacheWarmupMetrics getDataCacheWarmupMetrics() {
+        return dataCacheWarmupMetrics;
     }
-
 
     public void updateLoadInformation(FragmentInstanceExecState execState, TReportExecStatusParams params) {
         if (params.isSetDelta_urls()) {

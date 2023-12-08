@@ -27,8 +27,10 @@ import com.starrocks.common.ErrorCode;
 import com.starrocks.common.ErrorReport;
 import com.starrocks.common.MetaNotFoundException;
 import com.starrocks.common.UserException;
+import com.starrocks.datacache.DataCacheDetectRecorder;
 import com.starrocks.datacache.DataCacheDetector;
 import com.starrocks.datacache.DataCacheMgr;
+import com.starrocks.datacache.DataCacheWarmupMetrics;
 import com.starrocks.load.EtlJobType;
 import com.starrocks.scheduler.Constants;
 import com.starrocks.scheduler.ExecuteOption;
@@ -1011,39 +1013,41 @@ public class DDLStmtExecutor {
         @Override
         public ShowResultSet visitCreateDataCacheWarmupJobStatement(CreateDataCacheWarmupJobStmt statement,
                                                                     ConnectContext context) {
-            Column column = new Column("Status", ScalarType.createDefaultString());
-            ShowResultSetMetaData metaData = new ShowResultSetMetaData(Collections.singletonList(column));
-            List<List<String>> rows = new ArrayList<>();
+            Column column1 = new Column("DataCacheReadBytes", ScalarType.createDefaultString());
+            Column column2 = new Column("DataCacheWriteByte", ScalarType.createDefaultString());
+            ShowResultSetMetaData metaData = new ShowResultSetMetaData(List.of(column1, column2));
             List<String> row = new ArrayList<>();
 
             try {
+                final String warmupSQL = statement.getQuerySql();
+                DataCacheDetector detector = new DataCacheDetector(warmupSQL, context.getCurrentCatalog(), context.getDatabase());
+                detector.checkCanCacheSafely();
 
-                final String SELECT_SQL = statement.getQuerySql();
-                {
-                    DataCacheDetector detector =
-                            new DataCacheDetector(SELECT_SQL, context.getCurrentCatalog(), context.getDatabase());
-                    long estimateSize = detector.getEstimateSize();
-                }
                 String uniqueName = UUID.randomUUID().toString();
                 Task task = new Task(uniqueName);
                 task.setSource(Constants.TaskSource.DATACACHE_WARMUP);
                 task.setCreateTime(System.currentTimeMillis());
+                task.setCatalogName(context.getCurrentCatalog());
+                task.setDbName(context.getDatabase());
                 task.setDefinition(statement.getQuerySql());
                 //            Map<String, String> properties = statement.getProperties();
                 Map<String, String> properties = new HashMap<>();
                 task.setProperties(properties);
-                rows.add(row);
 
                 GlobalStateMgr.getCurrentState().getTaskManager().createTask(task, false);
                 ExecuteOption option = new ExecuteOption();
                 option.setSync(true);
                 SubmitResult submitResult =
                         GlobalStateMgr.getCurrentState().getTaskManager().executeTask(uniqueName, option);
-                row.add(submitResult.getStatus().name());
+
+                DataCacheWarmupMetrics dataCacheWarmupMetrics = DataCacheDetectRecorder.getLastWarmupMetrics();
+                row.add(String.valueOf(dataCacheWarmupMetrics.getDataCacheWarmupReadBytes()));
+                row.add(String.valueOf(dataCacheWarmupMetrics.getDataCacheWarmupWriteBytes()));
             } catch (Exception e) {
-                System.out.println(e.getMessage());
-                row.add("failed");
+                throw new RuntimeException(e.getMessage());
             }
+
+            List<List<String>> rows = new ArrayList<>();
             rows.add(row);
             return new ShowResultSet(metaData, rows);
         }

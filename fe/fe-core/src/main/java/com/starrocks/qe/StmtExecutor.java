@@ -80,6 +80,7 @@ import com.starrocks.common.util.TimeUtils;
 import com.starrocks.common.util.UUIDUtil;
 import com.starrocks.connector.ConnectorMetadata;
 import com.starrocks.connector.exception.RemoteFileNotFoundException;
+import com.starrocks.datacache.DataCacheDetectRecorder;
 import com.starrocks.http.HttpConnectContext;
 import com.starrocks.http.HttpResultSender;
 import com.starrocks.load.EtlJobType;
@@ -1766,6 +1767,12 @@ public class StmtExecutor {
                 && StatementBase.ExplainLevel.ANALYZE.equals(parsedStmt.getExplainLevel());
         boolean isSchedulerExplain = parsedStmt.isExplain()
                 && StatementBase.ExplainLevel.SCHEDULER.equals(parsedStmt.getExplainLevel());
+        boolean isWarmupDataCache = false;
+        boolean isSampleWarmupDataCache = false;
+        if (context.getOptimizerSetting().isPresent()) {
+            isWarmupDataCache = context.getOptimizerSetting().get().isEnableWarmupDataCache();
+            isSampleWarmupDataCache = context.getOptimizerSetting().get().isEnableSampleDataCache();
+        }
 
         if (isExplainAnalyze) {
             context.getSessionVariable().setEnableProfile(true);
@@ -1959,9 +1966,21 @@ public class StmtExecutor {
                 return;
             }
 
+            if (isWarmupDataCache) {
+                coord.startSchedulingWithoutDeploy();
+                Map<Long, Long> backendScanRanges = coord.getBackendTotalScanRangeSize();
+                DataCacheDetectRecorder.setBackendToScanRangeSize(backendScanRanges);
+                return;
+            }
+
             coord.exec();
             coord.setTopProfileSupplier(this::buildTopLevelProfile);
             coord.setExecPlan(execPlan);
+
+            if (isSampleWarmupDataCache) {
+                Map<Long, Long> backendScanRanges = coord.getBackendTotalScanRangeSize();
+                DataCacheDetectRecorder.setBackendToScanRangeSize(backendScanRanges);
+            }
 
             long jobDeadLineMs = System.currentTimeMillis() + context.getSessionVariable().getQueryTimeoutS() * 1000;
             coord.join(context.getSessionVariable().getQueryTimeoutS());

@@ -14,7 +14,8 @@
 
 package com.starrocks.scheduler;
 
-import com.starrocks.common.util.ProfileManager;
+import com.starrocks.datacache.DataCacheDetectRecorder;
+import com.starrocks.datacache.DataCacheWarmupMetrics;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.qe.StmtExecutor;
 
@@ -26,32 +27,18 @@ public class DataCacheWarmupTaskRunProcessor extends BaseTaskRunProcessor {
         try {
             ctx.getSessionVariable().setEnableScanDataCache(true);
             ctx.getSessionVariable().setEnablePopulateDatacache(true);
+            ctx.getSessionVariable().setEnableWarmupDataCache(true);
             ctx.getSessionVariable().setEnableProfile(true);
             ctx.getSessionVariable().setEnableAsyncProfile(false);
-            //            ctx.getAuditEventBuilder().reset();
-            //            ctx.getAuditEventBuilder()
-            //                    .setTimestamp(System.currentTimeMillis())
-            //                    .setClientIp(context.getRemoteIp())
-            //                    .setUser(ctx.getQualifiedUser())
-            //                    .setDb(ctx.getDatabase())
-            //                    .setCatalog(ctx.getCurrentCatalog());
-            //            Tracers.register(ctx);
-            executor = ctx.executeSql(context.getDefinition());
-            String profile = ProfileManager.getInstance().getProfile(ctx.getQueryId().toString());
-            System.out.println(profile);
+            executor = ctx.executeSql(String.format("INSERT INTO blackhole() %s", context.getDefinition()));
+            DataCacheWarmupMetrics metrics = executor.getCoordinator().getDataCacheWarmupBytes();
+            DataCacheDetectRecorder.setLastWarmupMetrics(metrics);
         } catch (Exception e) {
             throw e;
         } finally {
             ctx.getSessionVariable().setEnableProfile(false);
             ctx.getSessionVariable().setEnableScanDataCache(false);
             ctx.getSessionVariable().setEnablePopulateDatacache(false);
-            //            Tracers.close();
-            //            if (executor != null) {
-            //                auditAfterExec(context, executor.getParsedStmt(), executor.getQueryStatisticsForAuditLog());
-            //            } else {
-            //                // executor can be null if we encounter analysis error.
-            //                auditAfterExec(context, null, null);
-            //            }
         }
     }
 }
