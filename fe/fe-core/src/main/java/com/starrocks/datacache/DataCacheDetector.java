@@ -73,8 +73,7 @@ public class DataCacheDetector {
                 continue;
             }
 
-            long totalDataCacheSize =
-                    dataCacheMetrics.get().getDiskQuotaBytes() + dataCacheMetrics.get().getMemQuoteBytes();
+            long totalDataCacheSize = dataCacheMetrics.get().getDiskQuotaBytes();
             if (totalBytes > totalDataCacheSize) {
                 isFailed = true;
                 errorMsg.append(String.format(
@@ -119,6 +118,6 @@ public class DataCacheDetector {
 
         DataCacheWarmupMetrics dataCacheWarmupMetrics = stmtExecutor.getCoordinator().getDataCacheWarmupBytes();
         long totalSize = DataCacheDetectRecorder.getTotalSize();
-        return Math.max((double) dataCacheWarmupMetrics.getDataCacheWarmupNeedBytes() / (double) totalSize, 1);
+        return Math.min((double) dataCacheWarmupMetrics.getDataCacheWarmupNeedBytes() / (double) totalSize, 1);
     }
 }
