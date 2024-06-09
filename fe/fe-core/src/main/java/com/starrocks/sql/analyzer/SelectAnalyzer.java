@@ -201,6 +201,7 @@ public class SelectAnalyzer {
 
         for (SelectListItem item : selectList.getItems()) {
             if (item.isStar()) {
+
                 List<Field> fields = (item.getTblName() == null ? scope.getRelationFields().getAllFields()
                         : scope.getRelationFields().resolveFieldsWithPrefix(item.getTblName()))
                         .stream().filter(Field::isVisible).collect(Collectors.toList());
@@ -236,6 +237,7 @@ public class SelectAnalyzer {
                 }
                 outputFields.addAll(fields);
 
+                session.getQueryContext().setHasStarScan(true);
             } else {
                 String name;
                 if (item.getExpr() instanceof SlotRef) {

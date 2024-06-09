@@ -108,6 +108,8 @@ import com.starrocks.common.util.concurrent.lock.LockType;
 import com.starrocks.common.util.concurrent.lock.Locker;
 import com.starrocks.credential.CredentialUtil;
 import com.starrocks.datacache.DataCacheMgr;
+import com.starrocks.datacache.copilot.recommender.DataCacheCopilotFrequencyRecommender;
+import com.starrocks.datacache.copilot.recommender.DataCacheCopilotRecommender;
 import com.starrocks.load.DeleteMgr;
 import com.starrocks.load.ExportJob;
 import com.starrocks.load.ExportMgr;
@@ -164,6 +166,7 @@ import com.starrocks.sql.ast.GrantRevokeClause;
 import com.starrocks.sql.ast.HelpStmt;
 import com.starrocks.sql.ast.ImportColumnDesc;
 import com.starrocks.sql.ast.PartitionNames;
+import com.starrocks.sql.ast.RecommendDataCacheSelectStmt;
 import com.starrocks.sql.ast.ShowAlterStmt;
 import com.starrocks.sql.ast.ShowAnalyzeJobStmt;
 import com.starrocks.sql.ast.ShowAnalyzeStatusStmt;
@@ -2259,6 +2262,13 @@ public class ShowExecutor {
         @Override
         public ShowResultSet visitShowDataCacheRulesStatement(ShowDataCacheRulesStmt statement, ConnectContext context) {
             return new ShowResultSet(statement.getMetaData(), DataCacheMgr.getInstance().getShowResultSetRows());
+        }
+
+        @Override
+        public ShowResultSet visitRecommendDataCacheSelectStmt(RecommendDataCacheSelectStmt stmt,
+                                                               ConnectContext context) {
+            DataCacheCopilotRecommender recommender = new DataCacheCopilotFrequencyRecommender(stmt);
+            return recommender.recommend();
         }
 
         @Override

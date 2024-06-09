@@ -264,6 +264,7 @@ Status HttpServiceBE::start() {
 
     auto* datacache_action = new DataCacheAction(_env);
     _ev_http_server->register_handler(HttpMethod::GET, "/api/datacache/{action}", datacache_action);
+    _ev_http_server->register_handler(HttpMethod::DELETE, "/api/datacache/{action}", datacache_action);
     _http_handlers.emplace_back(datacache_action);
 
     auto* pipeline_driver_poller_action = new PipelineBlockingDriversAction(_env);

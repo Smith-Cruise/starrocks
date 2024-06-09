@@ -2954,4 +2954,16 @@ public class Config extends ConfigBase {
 
     @ConfField(mutable = true)
     public static boolean show_execution_groups = true;
+
+    @ConfField(mutable = true)
+    public static long datacache_copilot_max_flight_bytes = 20 * 1024 * 1024;
+
+    @ConfField(mutable = true)
+    public static long datacache_copilot_flush_interval_secs = 60;
+
+    @ConfField(mutable = true)
+    public static long datacache_copilot_delete_interval_secs = 60;
+
+    @ConfField(mutable = true)
+    public static long datacache_copilot_statistics_keep_interval_secs = 30 * 24 * 60;
 }

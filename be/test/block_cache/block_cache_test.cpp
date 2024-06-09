@@ -239,6 +239,45 @@ TEST_F(BlockCacheTest, write_with_overwrite_option) {
     cache->shutdown();
 }
 
+TEST_F(BlockCacheTest, test_priority) {
+    std::unique_ptr<BlockCache> cache(new BlockCache);
+    const size_t block_size = 1024 * 1024;
+
+    CacheOptions options;
+    size_t quota = 100 * 1024 * 1024;
+    options.disk_spaces.push_back({.path = "./block_disk_cache", .size = quota});
+    options.block_size = block_size;
+    options.max_concurrent_inserts = 100000;
+    options.max_flying_memory_mb = 100;
+    options.engine = "starcache";
+    Status status = cache->init(options);
+    ASSERT_TRUE(status.ok());
+
+    const size_t batch_size = block_size;
+    const size_t rounds = 100;
+    std::string cache_key = "test_high_pri";
+
+    WriteCacheOptions write_options;
+    write_options.priority = 1;
+
+    // write cache
+    for (size_t i = 0; i < rounds; ++i) {
+        char ch = 'a' + i % 26;
+        std::string value(batch_size, ch);
+        Status st = cache->write_buffer(cache_key + std::to_string(i), 0, batch_size, value.c_str(), &write_options);
+        ASSERT_TRUE(st.ok());
+    }
+
+    cache_key = "test_low_pri";
+    write_options.priority = 0;
+    for (size_t i = 0; i < rounds; ++i) {
+        char ch = 'a' + i % 26;
+        std::string value(batch_size, ch);
+        Status st = cache->write_buffer(cache_key + std::to_string(i), 0, batch_size, value.c_str(), &write_options);
+        ASSERT_TRUE(!st.ok());
+    }
+}
+
 TEST_F(BlockCacheTest, read_cache_with_adaptor) {
     const std::string cache_dir = "./block_disk_cache4";
     ASSERT_TRUE(fs::create_directories(cache_dir).ok());

@@ -17,6 +17,10 @@ package com.starrocks.statistic;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.starrocks.analysis.Expr;
+import com.starrocks.analysis.FunctionCallExpr;
+import com.starrocks.analysis.SlotRef;
+import com.starrocks.analysis.StringLiteral;
 import com.starrocks.analysis.TableName;
 import com.starrocks.catalog.Database;
 import com.starrocks.catalog.KeysType;
@@ -30,6 +34,7 @@ import com.starrocks.common.UserException;
 import com.starrocks.common.util.AutoInferUtil;
 import com.starrocks.common.util.FrontendDaemon;
 import com.starrocks.common.util.PropertyAnalyzer;
+import com.starrocks.datacache.copilot.DataCacheCopilotConstants;
 import com.starrocks.load.pipe.filelist.RepoCreator;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.server.GlobalStateMgr;
@@ -38,8 +43,11 @@ import com.starrocks.sql.analyzer.Analyzer;
 import com.starrocks.sql.ast.CreateDbStmt;
 import com.starrocks.sql.ast.CreateTableStmt;
 import com.starrocks.sql.ast.DropTableStmt;
+import com.starrocks.sql.ast.ExpressionPartitionDesc;
 import com.starrocks.sql.ast.HashDistributionDesc;
 import com.starrocks.sql.ast.KeysDesc;
+import com.starrocks.sql.ast.PartitionDesc;
+import com.starrocks.sql.ast.RangePartitionDesc;
 import com.starrocks.sql.common.EngineType;
 import com.starrocks.sql.common.ErrorType;
 import com.starrocks.sql.common.StarRocksPlannerException;
@@ -47,6 +55,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -270,6 +279,54 @@ public class StatisticsMetaManager extends FrontendDaemon {
         return checkTableExist(StatsConstants.EXTERNAL_FULL_STATISTICS_TABLE_NAME);
     }
 
+    private boolean createDataCacheCopilotStatisticsTable(ConnectContext context) {
+        LOG.info("create datacache copilot access frequency statistics table start");
+        TableName tableName = new TableName(StatsConstants.STATISTICS_DB_NAME,
+                DataCacheCopilotConstants.DATACACHE_COPILOT_STATISTICS_TABLE_NAME);
+        Map<String, String> properties = Maps.newHashMap();
+
+        try {
+            int defaultReplicationNum = AutoInferUtil.calDefaultReplicationNum();
+            properties.put(PropertyAnalyzer.PROPERTIES_REPLICATION_NUM, Integer.toString(defaultReplicationNum));
+
+            // build partition expression
+            List<String> columnList = List.of(DataCacheCopilotConstants.ACCESS_TIME_COLUMN_NAME);
+            List<PartitionDesc> partitionDescList = new ArrayList<>();
+            RangePartitionDesc rangePartitionDesc = new RangePartitionDesc(columnList, partitionDescList);
+            rangePartitionDesc.setAutoPartitionTable(true);
+            List<Expr> exprs = new ArrayList<>();
+            exprs.add(new StringLiteral("day"));
+            exprs.add(new SlotRef(null, DataCacheCopilotConstants.ACCESS_TIME_COLUMN_NAME,
+                    DataCacheCopilotConstants.ACCESS_TIME_COLUMN_NAME));
+            FunctionCallExpr functionCallExpr = new FunctionCallExpr("date_trunc", exprs);
+            ExpressionPartitionDesc expressionPartitionDesc =
+                    new ExpressionPartitionDesc(rangePartitionDesc, functionCallExpr);
+
+            CreateTableStmt stmt = new CreateTableStmt(false, false,
+                    tableName,
+                    StatisticUtils.buildStatsColumnDef(
+                            DataCacheCopilotConstants.DATACACHE_COPILOT_STATISTICS_TABLE_NAME),
+                    EngineType.defaultEngine().name(),
+                    null,
+                    expressionPartitionDesc,
+                    new HashDistributionDesc(10, List.of(DataCacheCopilotConstants.CATALOG_COLUMN_NAME,
+                            DataCacheCopilotConstants.DATABASE_COLUMN_NAME, DataCacheCopilotConstants.TABLE_COLUMN_NAME,
+                            DataCacheCopilotConstants.PARTITION_COLUMN_NAME,
+                            DataCacheCopilotConstants.COLUMN_COLUMN_NAME)),
+                    properties,
+                    null,
+                    "");
+
+            Analyzer.analyze(stmt, context);
+            GlobalStateMgr.getCurrentState().getLocalMetastore().createTable(stmt);
+        } catch (UserException e) {
+            LOG.warn("Failed to create full statistics table, " + e.getMessage());
+            return false;
+        }
+        LOG.info("create external full statistics table done");
+        return checkTableExist(StatsConstants.EXTERNAL_FULL_STATISTICS_TABLE_NAME);
+    }
+
     private boolean createExternalHistogramStatisticsTable(ConnectContext context) {
         LOG.info("create external histogram statistics table start");
         TableName tableName = new TableName(StatsConstants.STATISTICS_DB_NAME,
@@ -361,6 +418,8 @@ public class StatisticsMetaManager extends FrontendDaemon {
             return createExternalFullStatisticsTable(context);
         } else if (tableName.equals(StatsConstants.EXTERNAL_HISTOGRAM_STATISTICS_TABLE_NAME)) {
             return createExternalHistogramStatisticsTable(context);
+        } else if (tableName.equals(DataCacheCopilotConstants.DATACACHE_COPILOT_STATISTICS_TABLE_NAME)) {
+            return createDataCacheCopilotStatisticsTable(context);
         } else {
             throw new StarRocksPlannerException("Error table name " + tableName, ErrorType.INTERNAL_ERROR);
         }
@@ -401,6 +460,7 @@ public class StatisticsMetaManager extends FrontendDaemon {
         refreshStatisticsTable(StatsConstants.HISTOGRAM_STATISTICS_TABLE_NAME);
         refreshStatisticsTable(StatsConstants.EXTERNAL_FULL_STATISTICS_TABLE_NAME);
         refreshStatisticsTable(StatsConstants.EXTERNAL_HISTOGRAM_STATISTICS_TABLE_NAME);
+        refreshStatisticsTable(DataCacheCopilotConstants.DATACACHE_COPILOT_STATISTICS_TABLE_NAME);
 
         GlobalStateMgr.getCurrentState().getAnalyzeMgr().clearStatisticFromDroppedPartition();
         GlobalStateMgr.getCurrentState().getAnalyzeMgr().clearStatisticFromDroppedTable();

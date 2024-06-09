@@ -34,10 +34,13 @@ import com.starrocks.sql.ast.DataCacheSelectStatement;
 import com.starrocks.sql.ast.DropDataCacheRuleStmt;
 import com.starrocks.sql.ast.InsertStmt;
 import com.starrocks.sql.ast.QueryStatement;
+import com.starrocks.sql.ast.RecommendDataCacheSelectStmt;
 import com.starrocks.sql.ast.SelectRelation;
 import com.starrocks.sql.ast.StatementBase;
 import com.starrocks.sql.ast.TableRelation;
 
+import java.time.Duration;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -132,6 +135,8 @@ public class DataCacheStmtAnalyzer {
             SelectRelation selectRelation = (SelectRelation) queryStatement.getQueryRelation();
             TableRelation tableRelation = (TableRelation) selectRelation.getRelation();
             TableName tableName = tableRelation.getResolveTableName();
+
+            // set DataCacheSelectStatement properties
             if (CatalogMgr.isInternalCatalog(tableName.getCatalog()) && RunMode.isSharedNothingMode()) {
                 throw new SemanticException("Currently cache select is not supported in local olap table");
             }
@@ -139,8 +144,38 @@ public class DataCacheStmtAnalyzer {
 
             Map<String, String> properties = statement.getProperties();
             statement.setVerbose(Boolean.parseBoolean(properties.getOrDefault("verbose", "false")));
-            // todo analyze ttl, priority later
 
+            int priority = Integer.parseInt(properties.getOrDefault("priority", "0"));
+            if (priority != 0 && priority != 1) {
+                throw new SemanticException("Priority must be 0 or 1");
+            }
+            statement.setPriority(priority);
+
+            // Duration for which the warmup rule remains active.
+            // Use PT0M to prevent expiration of the rule.
+            // Use duration specified in ISO-8601 duration format (PnDTnHnMn).
+            long ttlSeconds = 0L;
+            try {
+                ttlSeconds = Duration.parse(properties.getOrDefault("ttl", "PT0M")).toSeconds();
+            } catch (DateTimeParseException e) {
+                throw new SemanticException(
+                        "Illegal ttl format, use duration specified in ISO-8601 duration format (PnDTnHnMn)");
+            }
+            statement.setTtlSeconds(ttlSeconds);
+
+            if (priority > 0 && ttlSeconds == 0) {
+                throw new SemanticException("TTL must be specified when priority > 0");
+            }
+
+            return null;
+        }
+
+        @Override
+        public Void visitRecommendDataCacheSelectStmt(RecommendDataCacheSelectStmt stmt, ConnectContext context) {
+            if (!context.getSessionVariable().isEnableDataCacheCopilot()) {
+                throw new SemanticException(
+                        "DataCache copilot(SET datacache_copilot=true) must be enabled before show recommendations.");
+            }
             return null;
         }
     }

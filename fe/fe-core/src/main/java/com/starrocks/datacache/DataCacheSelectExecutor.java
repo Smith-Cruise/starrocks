@@ -42,11 +42,14 @@ public class DataCacheSelectExecutor {
         // overwrite catalog
         tmpSessionVariable.setCatalog(statement.getCatalog());
         // force enable datacache and populate
+        // todo check enabled in cache select
         tmpSessionVariable.setEnableScanDataCache(true);
         tmpSessionVariable.setEnablePopulateDataCache(true);
         // make sure all accessed data must be cached
         tmpSessionVariable.setEnableDataCacheAsyncPopulateMode(false);
         tmpSessionVariable.setEnableDataCacheIOAdaptor(false);
+        tmpSessionVariable.setDataCachePriority(statement.getPriority());
+        tmpSessionVariable.setDatacacheTtlSeconds(statement.getTtlSeconds());
         connectContext.setSessionVariable(tmpSessionVariable);
 
         InsertStmt insertStmt = statement.getInsertStmt();
