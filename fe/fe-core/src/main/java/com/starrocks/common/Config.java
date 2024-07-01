@@ -3018,10 +3018,4 @@ public class Config extends ConfigBase {
 
     @ConfField(mutable = true)
     public static long datacache_copilot_statistics_keep_sec = 30 * 24 * 60 * 60; // 30 day
-
-    /*
-    * Avoid to return large results
-    * */
-    @ConfField(mutable = true)
-    public static int datacache_copilot_default_recommend_limit = 100;
 }
