@@ -56,12 +56,12 @@ public class DataCacheCopilotRepo extends FrontendDaemon {
 
     private boolean isSatisfyFlushCondition() {
         if ((System.currentTimeMillis() - lastFlushTimestamp) >
-                Config.datacache_copilot_repo_flush_interval_sec * 1000) {
+                Config.table_access_collector_flush_sec * 1000) {
             return true;
         }
 
         if (DataCacheCopilotStorage.getInstance().getEstimateMemorySize() >=
-                Config.datacache_copilot_storage_max_flight_bytes) {
+                Config.table_access_collector_max_flight_bytes) {
             return true;
         }
         return false;
@@ -69,7 +69,7 @@ public class DataCacheCopilotRepo extends FrontendDaemon {
 
     private boolean isSatisfyCleanCondition() {
         if ((System.currentTimeMillis() - lastCleanTimestamp) >
-                Config.datacache_copilot_repo_clean_interval_sec * 1000) {
+                Config.table_access_collector_clean_sec * 1000) {
             return true;
         }
 
@@ -149,7 +149,7 @@ public class DataCacheCopilotRepo extends FrontendDaemon {
         public static String buildDeleteStatsSQL() {
             SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd");
             String deleteTime = simpleDateFormat.format(
-                    System.currentTimeMillis() - Config.datacache_copilot_statistics_keep_sec * 1000L);
+                    System.currentTimeMillis() - Config.table_access_statistics_keep_sec * 1000L);
             return String.format(CLEAN_SQL_TEMPLATE, InternalCatalog.DEFAULT_INTERNAL_CATALOG_NAME,
                     StatsConstants.STATISTICS_DB_NAME,
                     DataCacheCopilotConstants.DATACACHE_COPILOT_STATISTICS_TABLE_NAME,
