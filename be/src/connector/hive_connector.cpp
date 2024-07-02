@@ -21,6 +21,7 @@
 #include "exec/hdfs_scanner_parquet.h"
 #include "exec/hdfs_scanner_partition.h"
 #include "exec/hdfs_scanner_text.h"
+#include "exec/cache_select_scanner.h"
 #include "exec/jni_scanner.h"
 #include "exprs/expr.h"
 #include "hive_chunk_sink.h"
@@ -98,6 +99,9 @@ Status HiveDataSource::open(RuntimeState* state) {
     _use_datacache = config::datacache_enable && BlockCache::instance()->available();
     if (state->query_options().__isset.enable_scan_datacache) {
         _use_datacache &= state->query_options().enable_scan_datacache;
+    }
+    if (_use_datacache && state->query_options().__isset.is_cache_select) {
+        _use_cache_select = state->query_options().is_cache_select;
     }
     if (state->query_options().__isset.enable_populate_datacache) {
         _enable_populate_datacache = state->query_options().enable_populate_datacache;
@@ -614,8 +618,9 @@ Status HiveDataSource::_init_scanner(RuntimeState* state) {
                                                             .hive_table = _hive_table,
                                                             .scan_range = &scan_range,
                                                             .scan_node = &hdfs_scan_node};
-
-    if (_use_partition_column_value_only) {
+    if (_use_cache_select) {
+        scanner = new CacheSelectScanner();
+    } else if (_use_partition_column_value_only) {
         DCHECK(_can_use_any_column);
         scanner = new HdfsPartitionScanner();
     } else if (use_paimon_jni_reader) {

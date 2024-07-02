@@ -50,6 +50,7 @@ public class DataCacheSelectExecutor {
         tmpSessionVariable.setDataCacheEvictProbability(100);
         tmpSessionVariable.setDataCachePriority(statement.getPriority());
         tmpSessionVariable.setDatacacheTTLSeconds(statement.getTTLSeconds());
+        tmpSessionVariable.setIsCacheSelect(true);
         connectContext.setSessionVariable(tmpSessionVariable);
 
         InsertStmt insertStmt = statement.getInsertStmt();
