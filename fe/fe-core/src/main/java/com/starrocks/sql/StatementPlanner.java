@@ -226,10 +226,10 @@ public class StatementPlanner {
                     new ColumnRefSet(logicalPlan.getOutputColumn()),
                     columnRefFactory);
         }
-        if (session.getSessionVariable().isEnableDataCacheCopilot()) {
-            try (Timer ignored = Tracers.watchScope("DataCacheCopilotCollect")) {
+        if (session.getSessionVariable().isEnableCollectTableAccessStatistics()) {
+            try (Timer ignored = Tracers.watchScope("CollectTableAccessStatistics")) {
                 DataCacheCopilotCollector.collectFromPhysicalPlan(optimizedPlan,
-                        session.getSessionVariable().isEnableDataCacheCopilotFullCollect());
+                        session.getSessionVariable().isEnableFullCollectTableAccessStatistics());
             }
         }
 

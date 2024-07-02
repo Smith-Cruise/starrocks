@@ -119,10 +119,6 @@ struct TStatisticData {
     14: optional i64 partitionId
     // the batch load version
     15: optional binary hll
-    16: optional string partitionName
-    17: optional string catalogName
-    18: optional string databaseName
-    19: optional string tableName
 }
 
 // Result data for user variable

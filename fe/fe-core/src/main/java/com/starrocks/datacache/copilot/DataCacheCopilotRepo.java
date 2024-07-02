@@ -24,9 +24,7 @@ import com.starrocks.privilege.PrivilegeBuiltinConstants;
 import com.starrocks.qe.ConnectContext;
 import com.starrocks.server.GlobalStateMgr;
 import com.starrocks.sql.ast.UserIdentity;
-import com.starrocks.statistic.StatisticExecutor;
 import com.starrocks.statistic.StatsConstants;
-import com.starrocks.thrift.TStatisticData;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -122,12 +120,6 @@ public class DataCacheCopilotRepo extends FrontendDaemon {
         }
     }
 
-    public List<TStatisticData> collectCopilotStatistics(String sql) {
-        StatisticExecutor executor = new StatisticExecutor();
-        ConnectContext context = buildConnectContext();
-        return executor.executeStatisticDQL(context, sql);
-    }
-
     private void executeSQL(String sql) throws Exception {
         LOG.debug("execute sql: {}", sql);
         buildConnectContext().executeSql(sql);
@@ -139,8 +131,6 @@ public class DataCacheCopilotRepo extends FrontendDaemon {
         // but QeProcessorImpl::reportExecStatus will check query id,
         // So we must disable report query status from BE to FE
         context.getSessionVariable().setEnableProfile(false);
-        // enlarge group_concat max length from 1024 -> 65535
-        context.getSessionVariable().setGroupConcatMaxLen(65535);
         context.setStatisticsContext(true);
         context.setDatabase(StatsConstants.STATISTICS_DB_NAME);
         context.setGlobalStateMgr(GlobalStateMgr.getCurrentState());

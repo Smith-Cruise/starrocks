@@ -15,8 +15,8 @@
 package com.starrocks.datacache.copilot;
 
 public class DataCacheCopilotConstants {
-    // constants for datacache_copilot_statistics table
-    public static final String DATACACHE_COPILOT_STATISTICS_TABLE_NAME = "datacache_copilot_statistics";
+    // constants for table_access_statistics table
+    public static final String DATACACHE_COPILOT_STATISTICS_TABLE_NAME = "table_access_statistics";
     public static final String CATALOG_NAME = "catalog_name";
     public static final String DATABASE_NAME = "database_name";
     public static final String TABLE_NAME = "table_name";
