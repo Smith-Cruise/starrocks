@@ -19,6 +19,7 @@ import com.starrocks.catalog.HiveTable;
 import com.starrocks.common.DdlException;
 import com.starrocks.connector.exception.StarRocksConnectorException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
@@ -27,6 +28,7 @@ import org.apache.logging.log4j.Logger;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import static com.starrocks.connector.hive.HiveMetastoreOperations.EXTERNAL_LOCATION_PROPERTY;
@@ -44,6 +46,15 @@ public class HiveWriteUtils {
             throw new DdlException("Can't create non-managed Hive table. " +
                     "Only supports creating hive table under Database location. " +
                     "You could execute command without external_location properties");
+        }
+    }
+
+    public static Optional<FileStatus> getFileStatus(Path path, Configuration conf) {
+        try {
+            FileSystem fileSystem = FileSystem.get(path.toUri(), conf);
+            return Optional.of(fileSystem.getFileStatus(path));
+        } catch (IOException e) {
+            return Optional.empty();
         }
     }
 

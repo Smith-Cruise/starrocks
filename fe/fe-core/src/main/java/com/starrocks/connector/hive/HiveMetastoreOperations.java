@@ -33,6 +33,7 @@ import com.starrocks.sql.ast.CreateTableLikeStmt;
 import com.starrocks.sql.ast.CreateTableStmt;
 import com.starrocks.sql.ast.ListPartitionDesc;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.logging.log4j.LogManager;
@@ -51,6 +52,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.starrocks.connector.PartitionUtil.executeInNewThread;
 import static com.starrocks.connector.hive.HiveWriteUtils.checkLocationProperties;
 import static com.starrocks.connector.hive.HiveWriteUtils.createDirectory;
+import static com.starrocks.connector.hive.HiveWriteUtils.getFileStatus;
 import static com.starrocks.connector.hive.HiveWriteUtils.isDirectory;
 import static com.starrocks.connector.hive.HiveWriteUtils.isEmpty;
 import static com.starrocks.connector.hive.HiveWriteUtils.pathExists;
@@ -343,11 +345,12 @@ public class HiveMetastoreOperations {
         String dbLocation = database.getLocation();
         Path databasePath = new Path(dbLocation);
 
-        if (!pathExists(databasePath, hadoopConf)) {
+        // Using FileStatus to combine two operations
+        Optional<FileStatus> dbFileStatus = getFileStatus(databasePath, hadoopConf);
+        if (dbFileStatus.isEmpty()) {
             throw new StarRocksConnectorException("Database '%s' location does not exist: %s", dbName, databasePath);
         }
-
-        if (!isDirectory(databasePath, hadoopConf)) {
+        if (!dbFileStatus.get().isDirectory()) {
             throw new StarRocksConnectorException("Database '%s' location is not a directory: %s",
                     dbName, databasePath);
         }
