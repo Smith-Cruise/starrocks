@@ -53,7 +53,6 @@ import static com.starrocks.connector.PartitionUtil.executeInNewThread;
 import static com.starrocks.connector.hive.HiveWriteUtils.checkLocationProperties;
 import static com.starrocks.connector.hive.HiveWriteUtils.createDirectory;
 import static com.starrocks.connector.hive.HiveWriteUtils.getFileStatus;
-import static com.starrocks.connector.hive.HiveWriteUtils.isDirectory;
 import static com.starrocks.connector.hive.HiveWriteUtils.isEmpty;
 import static com.starrocks.connector.hive.HiveWriteUtils.pathExists;
 import static com.starrocks.server.CatalogMgr.ResourceMappingCatalog.toResourceName;
