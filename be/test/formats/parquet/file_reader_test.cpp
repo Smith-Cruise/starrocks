@@ -1051,7 +1051,7 @@ TEST_F(FileReaderTest, TestGetNextOtherFilter) {
     ASSERT_TRUE(status.ok());
 
     // c1 is other conjunct filter column
-    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_conjunct_ctxs.size());
+    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_no_dict_filter_conjuncts_by_slot.size());
     const auto& conjunct_ctxs_by_slot = file_reader->_row_group_readers[0]->_param.conjunct_ctxs_by_slot;
     ASSERT_NE(conjunct_ctxs_by_slot.find(0), conjunct_ctxs_by_slot.end());
 
@@ -1104,7 +1104,7 @@ TEST_F(FileReaderTest, TestMultiFilterWithMultiPage) {
     }
 
     // c0 is conjunct filter column
-    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_conjunct_ctxs.size());
+    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_no_dict_filter_conjuncts_by_slot.size());
     const auto& conjunct_ctxs_by_slot = file_reader->_row_group_readers[0]->_param.conjunct_ctxs_by_slot;
     ASSERT_NE(conjunct_ctxs_by_slot.find(0), conjunct_ctxs_by_slot.end());
 
@@ -1132,7 +1132,7 @@ TEST_F(FileReaderTest, TestOtherFilterWithMultiPage) {
     ASSERT_TRUE(status.ok());
 
     // c0 is conjunct filter column
-    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_conjunct_ctxs.size());
+    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_no_dict_filter_conjuncts_by_slot.size());
     const auto& conjunct_ctxs_by_slot = file_reader->_row_group_readers[0]->_param.conjunct_ctxs_by_slot;
     ASSERT_NE(conjunct_ctxs_by_slot.find(0), conjunct_ctxs_by_slot.end());
 
@@ -2459,7 +2459,7 @@ TEST_F(FileReaderTest, TestLateMaterializationAboutRequiredComplexType) {
     chunk->append_column(ColumnHelper::create_column(type_b, true), chunk->num_columns());
     chunk->append_column(ColumnHelper::create_column(type_c, true), chunk->num_columns());
 
-    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_conjunct_ctxs.size());
+    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_no_dict_filter_conjuncts_by_slot.size());
     const auto& conjunct_ctxs_by_slot = file_reader->_row_group_readers[0]->_param.conjunct_ctxs_by_slot;
     ASSERT_NE(conjunct_ctxs_by_slot.find(0), conjunct_ctxs_by_slot.end());
 
@@ -2541,7 +2541,7 @@ TEST_F(FileReaderTest, TestLateMaterializationAboutOptionalComplexType) {
     chunk->append_column(ColumnHelper::create_column(type_b, true), chunk->num_columns());
     chunk->append_column(ColumnHelper::create_column(type_c, true), chunk->num_columns());
 
-    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_conjunct_ctxs.size());
+    ASSERT_EQ(1, file_reader->_row_group_readers[0]->_left_no_dict_filter_conjuncts_by_slot.size());
     const auto& conjunct_ctxs_by_slot = file_reader->_row_group_readers[0]->_param.conjunct_ctxs_by_slot;
     ASSERT_NE(conjunct_ctxs_by_slot.find(0), conjunct_ctxs_by_slot.end());
 

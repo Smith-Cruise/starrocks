@@ -157,9 +157,6 @@ private:
     // column readers for column chunk in row group
     std::unordered_map<SlotId, std::unique_ptr<ColumnReader>> _column_readers;
 
-    // conjunct ctxs that eval after chunk is dict decoded
-    std::vector<ExprContext*> _left_conjunct_ctxs;
-
     // active columns that hold read_col index
     std::vector<int> _active_column_indices;
     // lazy conlumns that hold read_col index

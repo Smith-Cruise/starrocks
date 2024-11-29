@@ -364,7 +364,6 @@ void GroupReader::_process_columns_and_conjunct_ctxs() {
                 if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
                     _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
                 } else {
-                    _left_conjunct_ctxs.emplace_back(ctx);
                     // used for struct col, some dict filter conjunct pushed down to leaf some left
                     if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
                         _left_no_dict_filter_conjuncts_by_slot.end()) {
