@@ -51,6 +51,20 @@ struct TypeDescriptor;
 
 namespace starrocks::parquet {
 
+struct BatchSlotIds {
+    std::set<SlotId> slot_ids;
+
+    void add_slot_ids(const std::vector<SlotId>& ids) {
+        for (auto& slot_id : ids) {
+            slot_ids.emplace(slot_id);
+        }
+    }
+
+    bool operator()(const std::set<SlotId>& lhs, const std::set<SlotId>& rhs) const {
+        return std::ranges::lexicographical_compare(lhs, rhs);
+    }
+};
+
 struct GroupReaderParam {
     struct Column {
         // parquet field index in root node's children
@@ -71,6 +85,7 @@ struct GroupReaderParam {
 
     // conjunct_ctxs that column is materialized in group reader
     std::unordered_map<SlotId, std::vector<ExprContext*>> conjunct_ctxs_by_slot;
+    std::vector<ExprContext*> scanner_conjunct_ctxs;
 
     // columns
     std::vector<Column> read_cols;
@@ -116,6 +131,18 @@ public:
     Status get_next(ChunkPtr* chunk, size_t* row_count);
     void collect_io_ranges(std::vector<io::SharedBufferedInputStream::IORange>* ranges, int64_t* end_offset,
                            ColumnIOType type = ColumnIOType::PAGES);
+    static bool has_found_slot_id(ExprContext* expr, const std::unordered_map<SlotId, size_t>& read_col_idx_map) {
+        std::vector<SlotId> collect_slot_ids;
+        expr->root()->get_slot_ids(&collect_slot_ids);
+
+        // check all SlotId existed
+        for (const SlotId slot_id : collect_slot_ids) {
+            if (read_col_idx_map.find(slot_id) == read_col_idx_map.end()) {
+                return false;
+            }
+        }
+        return true;
+    }
 
 private:
     void _set_end_offset(int64_t value) { _end_offset = value; }
@@ -181,7 +208,10 @@ private:
     // columns(index) use as dict filter column
     std::vector<int> _dict_column_indices;
     std::unordered_map<int, std::vector<std::vector<std::string>>> _dict_column_sub_field_paths;
+
     std::unordered_map<SlotId, std::vector<ExprContext*>> _left_no_dict_filter_conjuncts_by_slot;
+    std::map<BatchSlotIds, std::vector<ExprContext*>> _left_no_dict_filter_conjuncts_by_slots;
+
 
     SparseRange<uint64_t> _range;
     SparseRangeIterator<uint64_t> _range_iter;

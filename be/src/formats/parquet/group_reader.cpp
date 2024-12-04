@@ -354,36 +354,90 @@ Status GroupReader::_prepare_column_readers() const {
 
 void GroupReader::_process_columns_and_conjunct_ctxs() {
     const auto& conjunct_ctxs_by_slot = _param.conjunct_ctxs_by_slot;
-    int read_col_idx = 0;
+    const auto& scanner_conjunct_ctxs = _param.scanner_conjunct_ctxs;
+    std::unordered_map<SlotId, size_t> read_col_idx_map;
+    for (size_t idx = 0; idx < _param.read_cols.size(); idx++) {
+        read_col_idx_map.insert({_param.read_cols[idx].slot_id(), idx});
+    }
+    std::unordered_set<SlotId> active_read_col_idx{};
 
-    for (auto& column : _param.read_cols) {
-        SlotId slot_id = column.slot_id();
-        if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
-            for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
-                std::vector<std::string> sub_field_path;
-                if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
-                    _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
+    for (const auto& pair : conjunct_ctxs_by_slot) {
+        const auto& slot_id = pair.first;
+        auto it = read_col_idx_map.find(slot_id);
+        if (it == read_col_idx_map.end()) {
+            continue;
+        }
+        size_t read_col_idx = it->second;
+        for (ExprContext* ctx : pair.second) {
+            std::vector<std::string> sub_field_path;
+            if (_try_to_use_dict_filter(_param.read_cols[read_col_idx], ctx, sub_field_path, _param.read_cols[read_col_idx].decode_needed)) {
+                _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
+            } else {
+                // used for struct col, some dict filter conjunct pushed down to leaf some left
+                if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) == _left_no_dict_filter_conjuncts_by_slot.end()) {
+                    _left_no_dict_filter_conjuncts_by_slot.insert({slot_id, std::vector<ExprContext*>{ctx}});
                 } else {
-                    // used for struct col, some dict filter conjunct pushed down to leaf some left
-                    if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
-                        _left_no_dict_filter_conjuncts_by_slot.end()) {
-                        _left_no_dict_filter_conjuncts_by_slot.insert({slot_id, std::vector<ExprContext*>{ctx}});
-                    } else {
-                        _left_no_dict_filter_conjuncts_by_slot[slot_id].emplace_back(ctx);
-                    }
+                    _left_no_dict_filter_conjuncts_by_slot[slot_id].emplace_back(ctx);
+                }
+
+                BatchSlotIds batch_slot_ids;
+                batch_slot_ids.add_slot_ids({slot_id});
+                if (_left_no_dict_filter_conjuncts_by_slots.find(batch_slot_ids) == _left_no_dict_filter_conjuncts_by_slots.end()) {
+                    _left_no_dict_filter_conjuncts_by_slots.insert({batch_slot_ids, std::vector<ExprContext*>{ctx}});
+                } else {
+                    _left_no_dict_filter_conjuncts_by_slots[batch_slot_ids].emplace_back(ctx);
                 }
             }
-            _active_column_indices.emplace_back(read_col_idx);
-        } else {
-            if (config::parquet_late_materialization_enable) {
-                _lazy_column_indices.emplace_back(read_col_idx);
-            } else {
-                _active_column_indices.emplace_back(read_col_idx);
-            }
-            _column_readers[slot_id]->set_can_lazy_decode(true);
         }
-        ++read_col_idx;
+        active_read_col_idx.insert(read_col_idx);
     }
+
+    std::vector<ExprContext*> valid_scanner_conjunct_ctxs;
+
+    for (auto* expr_context : scanner_conjunct_ctxs) {
+        if (!has_found_slot_id(expr_context, read_col_idx_map)) {
+            continue;
+        }
+
+    }
+
+
+    // for (auto& column : _param.read_cols) {
+    //     SlotId slot_id = column.slot_id();
+    //     if (conjunct_ctxs_by_slot.find(slot_id) != conjunct_ctxs_by_slot.end()) {
+    //         for (ExprContext* ctx : conjunct_ctxs_by_slot.at(slot_id)) {
+    //             std::vector<std::string> sub_field_path;
+    //             if (_try_to_use_dict_filter(column, ctx, sub_field_path, column.decode_needed)) {
+    //                 _use_as_dict_filter_column(read_col_idx, slot_id, sub_field_path);
+    //             } else {
+    //                 // used for struct col, some dict filter conjunct pushed down to leaf some left
+    //                 if (_left_no_dict_filter_conjuncts_by_slot.find(slot_id) ==
+    //                     _left_no_dict_filter_conjuncts_by_slot.end()) {
+    //                     _left_no_dict_filter_conjuncts_by_slot.insert({slot_id, std::vector<ExprContext*>{ctx}});
+    //                 } else {
+    //                     _left_no_dict_filter_conjuncts_by_slot[slot_id].emplace_back(ctx);
+    //                 }
+    //
+    //                 BatchSlotIds batch_slot_ids;
+    //                 batch_slot_ids.add_slot_ids({slot_id});
+    //                 if (_left_no_dict_filter_conjuncts_by_slots.find(batch_slot_ids) == _left_no_dict_filter_conjuncts_by_slots.end()) {
+    //                     _left_no_dict_filter_conjuncts_by_slots.insert({batch_slot_ids, std::vector<ExprContext*>{ctx}});
+    //                 } else {
+    //                     _left_no_dict_filter_conjuncts_by_slots[batch_slot_ids].emplace_back(ctx);
+    //                 }
+    //             }
+    //         }
+    //         _active_column_indices.emplace_back(read_col_idx);
+    //     } else {
+    //         if (config::parquet_late_materialization_enable) {
+    //             _lazy_column_indices.emplace_back(read_col_idx);
+    //         } else {
+    //             _active_column_indices.emplace_back(read_col_idx);
+    //         }
+    //         _column_readers[slot_id]->set_can_lazy_decode(true);
+    //     }
+    //     ++read_col_idx;
+    // }
 
     std::unordered_map<int, size_t> col_cost;
     size_t all_cost = 0;

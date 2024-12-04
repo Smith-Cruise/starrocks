@@ -115,6 +115,7 @@ Status HdfsScanner::_build_scanner_context() {
     }
 
     ctx.conjunct_ctxs_by_slot = _scanner_params.conjunct_ctxs_by_slot;
+    ctx.scanner_conjunct_ctxs = _scanner_params.scanner_conjunct_ctxs;
 
     // build columns of materialized and partition.
     for (size_t i = 0; i < _scanner_params.materialize_slots.size(); i++) {

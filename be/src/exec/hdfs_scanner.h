@@ -248,6 +248,7 @@ struct HdfsScannerContext {
 
     std::vector<SlotDescriptor*> slot_descs;
     std::unordered_map<SlotId, std::vector<ExprContext*>> conjunct_ctxs_by_slot;
+    std::vector<ExprContext*> scanner_conjunct_ctxs;
 
     // materialized column read from parquet file
     std::vector<ColumnInfo> materialized_columns;
