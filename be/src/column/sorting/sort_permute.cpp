@@ -23,6 +23,7 @@
 #include "column/column_visitor_adapter.h"
 #include "column/const_column.h"
 #include "column/decimalv3_column.h"
+#include "column/file_column.h"
 #include "column/fixed_length_column_base.h"
 #include "column/json_column.h"
 #include "column/map_column.h"
@@ -166,6 +167,8 @@ public:
         // TODO(SmithCruise) Not tested.
         return generic_visit(dst);
     }
+
+    Status do_visit(FileColumn* dst) { return generic_visit(dst); }
 
     template <typename T>
     Status do_visit(BinaryColumnBase<T>* dst) {
